@@ -1,0 +1,13 @@
+package com.barberflow.staff.infrastructure;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface BarberRepository extends JpaRepository<BarberJpaEntity, UUID> {
+
+  List<BarberJpaEntity> findAllByTenantIdOrderByCreatedAtAsc(UUID tenantId);
+
+  Optional<BarberJpaEntity> findByIdAndTenantId(UUID id, UUID tenantId);
+}
