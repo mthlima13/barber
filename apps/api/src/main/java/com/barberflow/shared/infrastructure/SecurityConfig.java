@@ -44,8 +44,16 @@ public class SecurityConfig {
                     // Login da equipe e bootstrap do primeiro gestor
                     .requestMatchers("/api/v1/auth/login", "/api/v1/auth/bootstrap")
                     .permitAll()
+                    // Pagina de erro: dispatch de erro deve preservar o status
+                    // real (ex.: 500), nao virar 401 do filtro de JWT
+                    .requestMatchers("/error")
+                    .permitAll()
                     // Endpoints publicos (disponibilidade; rate limit em fase posterior)
                     .requestMatchers("/api/v1/public/**")
+                    .permitAll()
+                    // Aceite de oferta de lista de espera: o token unico do
+                    // caminho e a propria credencial (spec, secao 10)
+                    .requestMatchers("/api/v1/customer/offers/*/accept")
                     .permitAll()
                     // Painel do gestor (agenda do barbeiro entra depois: BARBER)
                     .requestMatchers("/api/v1/dashboard/**")

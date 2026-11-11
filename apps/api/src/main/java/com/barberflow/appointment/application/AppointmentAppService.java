@@ -6,8 +6,6 @@ import com.barberflow.appointment.infrastructure.AppointmentJpaEntity;
 import com.barberflow.appointment.infrastructure.AppointmentRepository;
 import com.barberflow.appointment.infrastructure.CustomerJpaEntity;
 import com.barberflow.appointment.infrastructure.CustomerRepository;
-import com.barberflow.availability.api.Slot;
-import com.barberflow.availability.application.AvailabilityQueryService;
 import com.barberflow.auth.domain.AuthPrincipal;
 import com.barberflow.auth.infrastructure.JwtService;
 import com.barberflow.service.infrastructure.ServiceJpaEntity;
@@ -19,10 +17,7 @@ import com.barberflow.tenant.infrastructure.TenantRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -39,9 +34,6 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 public class AppointmentAppService {
-
-  /** Estados ocupantes do intervalo (restricao de exclusao na V4). */
-  static final Set<String> ACTIVE_STATUSES = Set.of("PENDING", "CONFIRMED");
 
   /** Transicoes validas da maquina de estados (spec, secao 8). */
   static final Set<String> VALID_TRANSITIONS =
@@ -60,13 +52,10 @@ public class AppointmentAppService {
   private final ServiceRepository services;
   private final CustomerRepository customers;
   private final AppointmentRepository appointments;
-  private final com.barberflow.availability.infrastructure.BusinessHoursRepository
-      businessHoursRepo;
-  private final com.barberflow.availability.infrastructure.ScheduleExceptionRepository
-      scheduleExceptions;
   private final com.barberflow.availability.infrastructure.AvailabilityJdbcRepository
       availabilityJdbc;
-  private final AvailabilityQueryService availability;
+  private final SlotValidator slotValidator;
+  private final com.barberflow.waitlist.application.WaitlistService waitlist;
   private final JwtService jwt;
 
   public AppointmentAppService(
@@ -75,20 +64,18 @@ public class AppointmentAppService {
       ServiceRepository services,
       CustomerRepository customers,
       AppointmentRepository appointments,
-      com.barberflow.availability.infrastructure.BusinessHoursRepository businessHoursRepo,
-      com.barberflow.availability.infrastructure.ScheduleExceptionRepository scheduleExceptions,
       com.barberflow.availability.infrastructure.AvailabilityJdbcRepository availabilityJdbc,
-      AvailabilityQueryService availability,
+      SlotValidator slotValidator,
+      com.barberflow.waitlist.application.WaitlistService waitlist,
       JwtService jwt) {
     this.tenants = tenants;
     this.barbers = barbers;
     this.services = services;
     this.customers = customers;
     this.appointments = appointments;
-    this.businessHoursRepo = businessHoursRepo;
-    this.scheduleExceptions = scheduleExceptions;
     this.availabilityJdbc = availabilityJdbc;
-    this.availability = availability;
+    this.slotValidator = slotValidator;
+    this.waitlist = waitlist;
     this.jwt = jwt;
   }
 
@@ -150,7 +137,7 @@ public class AppointmentAppService {
       ZoneId zone = ZoneId.of(tenant.getTimezone());
       throw new AppointmentConflictException(
           "Horario indisponivel para este profissional",
-          alternatives(
+          slotValidator.alternatives(
               tenant.getId(),
               tenant.getTimezone(),
               barber.getId(),
@@ -175,6 +162,9 @@ public class AppointmentAppService {
   public AppointmentResponse cancelForCustomer(AuthPrincipal principal, UUID appointmentId) {
     AppointmentJpaEntity entity = loadForCustomer(principal, appointmentId);
     transition(entity, "CANCELLED");
+    // Horario liberado fica elegivel para a lista de espera (spec, secao 9.2.3);
+    // ofertas registradas na mesma transacao.
+    waitlist.process(entity.getTenantId());
     // TODO(fase-4): evento AppointmentCancelled na outbox, na mesma transacao.
     return toResponse(entity, null);
   }
@@ -228,6 +218,10 @@ public class AppointmentAppService {
             .findByIdAndTenantId(appointmentId, tenantId)
             .orElseThrow(() -> notFound("Reserva nao encontrada para esta barbearia"));
     transition(entity, newStatus);
+    // So CANCELLED libera o intervalo (COMPLETED/NO_SHOW o consumiram).
+    if ("CANCELLED".equals(newStatus)) {
+      waitlist.process(tenantId);
+    }
     return toResponse(entity, null);
   }
 
@@ -249,72 +243,8 @@ public class AppointmentAppService {
               .map(AppointmentJpaEntity::getBarberId)
               .orElseThrow(() -> notFound("Reserva nao encontrada"));
     }
-
-    ZoneId zone = ZoneId.of(tenant.getTimezone());
-    LocalDate date = startsAt.atZone(zone).toLocalDate();
-    LocalTime startLocal = startsAt.atZone(zone).toLocalTime();
-    LocalTime endLocal = endsAt.atZone(zone).toLocalTime();
-    if (endLocal.isBefore(startLocal) || endLocal.equals(startLocal)) {
-      throw badRequest("Reserva nao pode atravessar a meia-noite");
-    }
-    int weekday = date.getDayOfWeek().getValue() % 7;
-
-    // Janela de expediente precisa conter o intervalo (spec, secao 7.2).
-    var windows = businessHoursRepo.findByTenantIdAndBarberIdAndWeekdayOrderByStartLocalAsc(
-        tenant.getId(), barberId, weekday);
-    boolean inside =
-        windows.stream()
-            .anyMatch(w -> w.getStartLocal().compareTo(startLocal) <= 0
-                && endLocal.compareTo(w.getEndLocal()) <= 0);
-    if (!inside) {
-      throw badRequest("Horario fora do expediente do profissional");
-    }
-
-    // Sobreposicao com reservas ativas ou bloqueios -> 409 com alternativas
-    // (spec, secao 7.6). A restricao de exclusao da V4 e a rede de seguranca.
-    List<long[]> busy = new ArrayList<>();
-    appointments
-        .findByTenantIdAndBarberIdAndStatusInAndEndsAtAfterAndStartsAtBefore(
-            tenant.getId(), barberId, ACTIVE_STATUSES, date.atStartOfDay(zone).toInstant(),
-            date.plusDays(1).atStartOfDay(zone).toInstant())
-        .forEach(
-            entity -> {
-              if (!entity.getId().equals(ignoreAppointmentId)) {
-                busy.add(
-                    new long[] {
-                      entity.getStartsAt().toEpochMilli(), entity.getEndsAt().toEpochMilli()
-                    });
-              }
-            });
-    scheduleExceptions
-        .findByTenantIdAndBarberIdAndEndAtAfterAndStartAtBefore(
-            tenant.getId(), barberId, date.atStartOfDay(zone).toInstant(),
-            date.plusDays(1).atStartOfDay(zone).toInstant())
-        .forEach(
-            exception ->
-                busy.add(
-                    new long[] {
-                      exception.getStartAt().toEpochMilli(), exception.getEndAt().toEpochMilli()
-                    }));
-
-    for (long[] interval : busy) {
-      if (interval[0] < endsAt.toEpochMilli() && startsAt.toEpochMilli() < interval[1]) {
-        throw new AppointmentConflictException(
-            "Horario indisponivel para este profissional",
-            alternatives(tenant.getId(), tenant.getTimezone(), barberId, service.getId(), date));
-      }
-    }
-  }
-
-  // Bloqueios de agenda (schedule_exceptions) via AvailabilityQueryService:
-  // reuso do calculo para listar alternativas no 409.
-  private List<Slot> alternatives(
-      UUID tenantId, String timezone, UUID barberId, UUID serviceId, LocalDate date) {
-    try {
-      return availability.forTenant(tenantId, timezone, barberId, serviceId, date).slots();
-    } catch (ResponseStatusException e) {
-      return List.of();
-    }
+    slotValidator.validateFree(
+        tenant, barberId, service.getId(), startsAt, endsAt, ignoreAppointmentId, null);
   }
 
   private void transition(AppointmentJpaEntity entity, String newStatus) {

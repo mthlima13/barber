@@ -59,6 +59,17 @@ public class JwtService {
     return ttlSeconds;
   }
 
+  /**
+   * Token unico de oferta de lista de espera: HMAC do id da oferta com a
+   * chave do servidor. Nunca e salvo em claro (so o hash SHA-256 no banco,
+   * spec, secao 6); como depende do segredo, pode ser rederivado pelo dono
+   * da inscricao enquanto a oferta estiver valida (entrega MVP; TODO
+   * fase-4: enviar por WhatsApp na criacao e nunca mais reapresentar).
+   */
+  public String offerToken(UUID offerId) {
+    return hmac("offer:" + offerId);
+  }
+
   /** Verifica assinatura e expiracao; lanca IllegalArgumentException se invalido. */
   @SuppressWarnings("unchecked")
   public AuthPrincipal verify(String token) {

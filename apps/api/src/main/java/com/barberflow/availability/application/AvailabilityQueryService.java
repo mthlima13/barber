@@ -11,6 +11,7 @@ import com.barberflow.staff.infrastructure.BarberJpaEntity;
 import com.barberflow.staff.infrastructure.BarberRepository;
 import com.barberflow.tenant.infrastructure.TenantJpaEntity;
 import com.barberflow.tenant.infrastructure.TenantRepository;
+import com.barberflow.waitlist.infrastructure.SlotOfferRepository;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -35,6 +36,9 @@ import org.springframework.web.server.ResponseStatusException;
  * Intervalos sao semiabertos {@code [start, end)} — atendimentos consecutivos
  * podem compartilhar a fronteira. A disponibilidade e estimativa; a
  * confirmacao do agendamento revalida no servidor (Fase 2).</p>
+ *
+ * <p>Holds de lista de espera contam como ocupados (spec, secao 9.2: vaga
+ * ofertada nao e anunciada como livre).</p>
  */
 @Service
 public class AvailabilityQueryService {
@@ -45,6 +49,7 @@ public class AvailabilityQueryService {
   private final BusinessHoursRepository businessHours;
   private final ScheduleExceptionRepository exceptions;
   private final AvailabilityJdbcRepository availabilityJdbc;
+  private final SlotOfferRepository slotOffers;
   private final int slotStepMinutes;
   private final int minLeadMinutes;
 
@@ -55,6 +60,7 @@ public class AvailabilityQueryService {
       BusinessHoursRepository businessHours,
       ScheduleExceptionRepository exceptions,
       AvailabilityJdbcRepository availabilityJdbc,
+      SlotOfferRepository slotOffers,
       @Value("${barberflow.availability.slot-step-minutes:15}") int slotStepMinutes,
       @Value("${barberflow.availability.min-lead-minutes:0}") int minLeadMinutes) {
     this.tenants = tenants;
@@ -63,6 +69,7 @@ public class AvailabilityQueryService {
     this.businessHours = businessHours;
     this.exceptions = exceptions;
     this.availabilityJdbc = availabilityJdbc;
+    this.slotOffers = slotOffers;
     this.slotStepMinutes = slotStepMinutes;
     this.minLeadMinutes = minLeadMinutes;
   }
@@ -131,6 +138,17 @@ public class AvailabilityQueryService {
       busy.add(new long[] {exception.getStartAt().toEpochMilli(), exception.getEndAt().toEpochMilli()});
     }
     busy.addAll(availabilityJdbc.reservedIntervals(tenantId, barberId, dayStart, dayEnd));
+    // Holds de lista de espera: oferta PENDING e valida reserva o intervalo
+    // (spec, secao 9.2 — vaga em hold nao e anunciada como livre).
+    Instant now = Instant.now();
+    slotOffers
+        .findActiveHolds(tenantId, barberId, "PENDING")
+        .stream()
+        .filter(offer -> !offer.expirada(now))
+        .forEach(
+            offer ->
+                busy.add(
+                    new long[] {offer.getStartsAt().toEpochMilli(), offer.getEndsAt().toEpochMilli()}));
 
     Duration duration = Duration.ofMinutes(service.getDurationMinutes());
     Duration step = Duration.ofMinutes(slotStepMinutes);

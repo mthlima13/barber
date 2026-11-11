@@ -55,3 +55,6 @@ barberflow:
     # Politicas do motor de disponibilidade (spec, secao 7.8)
     slot-step-minutes: ${AVAILABILITY_SLOT_STEP_MINUTES:15}
     min-lead-minutes: ${AVAILABILITY_MIN_LEAD_MINUTES:0}
+  waitlist:
+    # Validade da oferta de horario (spec, secao 9.2.4: "uma pessoa por vez")
+    offer-ttl-minutes: ${WAITLIST_OFFER_TTL_MINUTES:5}
