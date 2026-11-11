@@ -34,14 +34,24 @@ public class AvailabilityJdbcRepository {
   }
 
   /**
-   * Reservas ativas que intersectam o dia, como intervalos UTC
-   * {@code [start, end)} (spec, secao 7.5).
-   *
-   * <p>TODO(fase-2): consultar a tabela {@code appointments} quando existir
-   * (status PENDING/CONFIRMED).</p>
+   * Reservas ativas (PENDING/CONFIRMED) que intersectam o dia, como intervalos
+   * UTC {@code [start, end)} (spec, secao 7.5).
    */
   public List<long[]> reservedIntervals(
       UUID tenantId, UUID barberId, Instant dayStart, Instant dayEnd) {
-    return List.of();
+    return jdbc.query(
+        "SELECT starts_at, ends_at FROM appointments"
+            + " WHERE tenant_id = ? AND barber_id = ?"
+            + " AND status IN ('PENDING', 'CONFIRMED')"
+            + " AND ends_at > ? AND starts_at < ?"
+            + " ORDER BY starts_at",
+        (rs, i) ->
+            new long[] {
+              rs.getTimestamp(1).getTime(), rs.getTimestamp(2).getTime()
+            },
+        tenantId,
+        barberId,
+        java.sql.Timestamp.from(dayStart),
+        java.sql.Timestamp.from(dayEnd));
   }
 }
