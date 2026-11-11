@@ -2,6 +2,10 @@ spring:
   application:
     name: barberflow-api
 
+  mvc:
+    problemdetails:
+      enabled: true
+
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/barberflow}
     username: ${POSTGRES_USER:barberflow}
@@ -37,3 +41,7 @@ management:
 logging:
   level:
     root: INFO
+
+barberflow:
+  # Tenant do MVP (uma barbearia no lancamento); substituido pelo auth quando existir
+  default-tenant-slug: ${BARBERSHOP_DEFAULT_TENANT_SLUG:barbearia-piloto}
