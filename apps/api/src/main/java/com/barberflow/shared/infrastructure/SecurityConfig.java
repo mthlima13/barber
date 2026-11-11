@@ -44,6 +44,9 @@ public class SecurityConfig {
                     // Login da equipe e bootstrap do primeiro gestor
                     .requestMatchers("/api/v1/auth/login", "/api/v1/auth/bootstrap")
                     .permitAll()
+                    // Endpoints publicos (disponibilidade; rate limit em fase posterior)
+                    .requestMatchers("/api/v1/public/**")
+                    .permitAll()
                     // Painel do gestor (agenda do barbeiro entra depois: BARBER)
                     .requestMatchers("/api/v1/dashboard/**")
                     .hasRole("MANAGER")
