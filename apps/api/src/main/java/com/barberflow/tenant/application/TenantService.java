@@ -1,43 +1,30 @@
 package com.barberflow.tenant.application;
 
-import com.barberflow.tenant.infrastructure.TenantRepository;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Resolucao do tenant para operacoes protegidas do MVP.
+ * Resolucao do tenant para operacoes protegidas.
  *
- * <p>TODO(auth): enquanto o modulo de autenticacao nao existe (login da equipe,
- * tokens de gerenciamento), o tenant e resolvido por configuracao
- * ({@code barberflow.default-tenant-slug}). Quando {@code auth} entrar em
- * operacao, o tenant deve vir da sessao/JWT validado — nunca de entrada do
- * cliente (spec, secao 5).</p>
+ * <p>O tenant vem SEMPRE da sessao autenticada (claims do token JWT) — nunca
+ * de entrada do cliente (spec, secao 5). Chamadas sem sessao respondem 401.</p>
  */
 @Service
 public class TenantService {
 
-  private final TenantRepository tenants;
-  private final String defaultTenantSlug;
-
-  public TenantService(
-      TenantRepository tenants,
-      @Value("${barberflow.default-tenant-slug}") String defaultTenantSlug) {
-    this.tenants = tenants;
-    this.defaultTenantSlug = defaultTenantSlug;
-  }
-
-  /** ID do tenant padrao configurado; falha com 503 se nao estiver provisionado. */
-  public UUID requireDefaultTenantId() {
-    return tenants
-        .findBySlug(defaultTenantSlug)
-        .map(t -> t.getId())
-        .orElseThrow(
-            () ->
-                new ResponseStatusException(
-                    HttpStatus.SERVICE_UNAVAILABLE,
-                    "Tenant padrao nao provisionado: '" + defaultTenantSlug + "'"));
+  /** Tenant da sessao atual (claim do token); 401 se nao autenticado. */
+  public UUID requireCurrentTenantId() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication != null
+        && authentication.getPrincipal()
+            instanceof com.barberflow.auth.domain.AuthPrincipal principal) {
+      return principal.tenantId();
+    }
+    throw new ResponseStatusException(
+        HttpStatus.UNAUTHORIZED, "Sessao sem tenant: faca login na barbearia");
   }
 }

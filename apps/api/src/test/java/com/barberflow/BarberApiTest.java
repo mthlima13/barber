@@ -3,29 +3,15 @@ package com.barberflow;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Fase 1: CRUD de profissionais e habilitacao de servicos (spec, secao 10).
+ *
+ * <p>Todas as chamadas usam o token do gestor de teste (bootstrap/login da
+ * base); o tenant vem do token (spec, secao 5).</p>
  */
 class BarberApiTest extends BaseIntegrationTest {
-
-  private static final String TENANT_SLUG = "barbearia-piloto";
-
-  @Autowired JdbcTemplate jdbc;
-
-  @BeforeEach
-  void provisionDefaultTenant() {
-    jdbc.update(
-        "INSERT INTO tenants (slug, name, timezone, status) VALUES (?, ?, ?, 'ACTIVE')"
-            + " ON CONFLICT (slug) DO NOTHING",
-        TENANT_SLUG,
-        "Barbearia Piloto",
-        "America/Sao_Paulo");
-  }
 
   private String barberJson(String displayName) {
     return """
@@ -36,7 +22,7 @@ class BarberApiTest extends BaseIntegrationTest {
 
   private String createService(String name) throws Exception {
     var response =
-        call(
+        callAuth(
             "POST",
             "/api/v1/dashboard/services",
             """
@@ -49,7 +35,7 @@ class BarberApiTest extends BaseIntegrationTest {
   }
 
   private String createBarber(String displayName) throws Exception {
-    var response = call("POST", "/api/v1/dashboard/barbers", barberJson(displayName));
+    var response = callAuth("POST", "/api/v1/dashboard/barbers", barberJson(displayName));
     assertThat(response.statusCode()).isEqualTo(201);
     return response.body().substring(
         response.body().indexOf("\"id\":\"") + 6,
@@ -58,7 +44,7 @@ class BarberApiTest extends BaseIntegrationTest {
 
   @Test
   void createReturns201AndActiveByDefault() throws Exception {
-    var response = call("POST", "/api/v1/dashboard/barbers", barberJson("Joao " + UUID.randomUUID()));
+    var response = callAuth("POST", "/api/v1/dashboard/barbers", barberJson("Joao " + UUID.randomUUID()));
 
     assertThat(response.statusCode()).isEqualTo(201);
     assertThat(response.headers().firstValue("Location")).isPresent();
@@ -69,7 +55,7 @@ class BarberApiTest extends BaseIntegrationTest {
   @Test
   void createWithUnknownUserReturns400() throws Exception {
     var response =
-        call(
+        callAuth(
             "POST",
             "/api/v1/dashboard/barbers",
             """
@@ -82,9 +68,9 @@ class BarberApiTest extends BaseIntegrationTest {
 
   @Test
   void listReturnsCreatedBarbers() throws Exception {
-    call("POST", "/api/v1/dashboard/barbers", barberJson("Maria " + UUID.randomUUID()));
+    callAuth("POST", "/api/v1/dashboard/barbers", barberJson("Maria " + UUID.randomUUID()));
 
-    var response = call("GET", "/api/v1/dashboard/barbers", null);
+    var response = callAuth("GET", "/api/v1/dashboard/barbers", null);
     assertThat(response.statusCode()).isEqualTo(200);
     assertThat(response.body()).contains("\"displayName\"");
   }
@@ -94,7 +80,7 @@ class BarberApiTest extends BaseIntegrationTest {
     String id = createBarber("Nome " + UUID.randomUUID());
 
     var response =
-        call(
+        callAuth(
             "PATCH",
             "/api/v1/dashboard/barbers/" + id,
             """
@@ -110,10 +96,10 @@ class BarberApiTest extends BaseIntegrationTest {
   void deleteSoftDisablesBarber() throws Exception {
     String id = createBarber("Sai " + UUID.randomUUID());
 
-    var deleted = call("DELETE", "/api/v1/dashboard/barbers/" + id, null);
+    var deleted = callAuth("DELETE", "/api/v1/dashboard/barbers/" + id, null);
     assertThat(deleted.statusCode()).isEqualTo(204);
 
-    var after = call("GET", "/api/v1/dashboard/barbers/" + id, null);
+    var after = callAuth("GET", "/api/v1/dashboard/barbers/" + id, null);
     assertThat(after.statusCode()).isEqualTo(200);
     assertThat(after.body()).contains("\"active\":false");
   }
@@ -125,7 +111,7 @@ class BarberApiTest extends BaseIntegrationTest {
     String s2 = createService("Barba " + UUID.randomUUID());
 
     var put =
-        call(
+        callAuth(
             "PUT",
             "/api/v1/dashboard/barbers/" + barberId + "/services",
             """
@@ -135,12 +121,12 @@ class BarberApiTest extends BaseIntegrationTest {
     assertThat(put.statusCode()).isEqualTo(200);
     assertThat(put.body()).contains("\"durationMinutes\":30");
 
-    var list = call("GET", "/api/v1/dashboard/barbers/" + barberId + "/services", null);
+    var list = callAuth("GET", "/api/v1/dashboard/barbers/" + barberId + "/services", null);
     assertThat(list.statusCode()).isEqualTo(200);
     assertThat(list.body()).contains(s1, s2);
 
     // PUT vazio limpa a habilitacao
-    var clear = call("PUT", "/api/v1/dashboard/barbers/" + barberId + "/services",
+    var clear = callAuth("PUT", "/api/v1/dashboard/barbers/" + barberId + "/services",
         "{\"serviceIds\":[]}");
     assertThat(clear.statusCode()).isEqualTo(200);
     assertThat(clear.body()).isEqualTo("[]");
@@ -151,7 +137,7 @@ class BarberApiTest extends BaseIntegrationTest {
     String barberId = createBarber("Prof " + UUID.randomUUID());
 
     var response =
-        call(
+        callAuth(
             "PUT",
             "/api/v1/dashboard/barbers/" + barberId + "/services",
             """
@@ -164,7 +150,7 @@ class BarberApiTest extends BaseIntegrationTest {
 
   @Test
   void getUnknownBarberReturns404() throws Exception {
-    var response = call("GET", "/api/v1/dashboard/barbers/" + UUID.randomUUID(), null);
+    var response = callAuth("GET", "/api/v1/dashboard/barbers/" + UUID.randomUUID(), null);
     assertThat(response.statusCode()).isEqualTo(404);
   }
 }

@@ -5,7 +5,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -23,11 +22,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
-    properties = {
-      "server.port=8183",
-      "spring.security.user.name=test",
-      "spring.security.user.password=test"
-    })
+    properties = {"server.port=8183"})
 public abstract class BaseIntegrationTest {
 
   static final int PORT = 8183;
@@ -47,23 +42,104 @@ public abstract class BaseIntegrationTest {
 
   private static final HttpClient HTTP = HttpClient.newHttpClient();
 
-  /** Requisicao HTTP com autenticacao basica do usuario de teste. */
+  /** Requisicao sem autenticacao. */
   static HttpResponse<String> call(String method, String path, String jsonBody) throws Exception {
+    return exchange(method, path, jsonBody, null);
+  }
+
+  /** Requisicao com Bearer do gestor de teste (bootstrap/login sob demanda). */
+  static HttpResponse<String> callAuth(String method, String path, String jsonBody)
+      throws Exception {
+    return exchange(method, path, jsonBody, bearer());
+  }
+
+  /** Requisicao com token explicito (para testar tokens invalidos). */
+  static HttpResponse<String> callWith(String token, String method, String path, String jsonBody)
+      throws Exception {
+    return exchange(method, path, jsonBody, token);
+  }
+
+  private static HttpResponse<String> exchange(
+      String method, String path, String jsonBody, String bearerToken) throws Exception {
     var builder =
         HttpRequest.newBuilder(URI.create("http://localhost:" + PORT + path))
-            .header("Authorization", basicAuth())
-            .header("Content-Type", "application/json")
-            .method(
-                method,
-                jsonBody == null
-                    ? HttpRequest.BodyPublishers.noBody()
-                    : HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8));
+            .header("Content-Type", "application/json");
+    if (bearerToken != null) {
+      builder.header("Authorization", "Bearer " + bearerToken);
+    }
+    builder.method(
+        method,
+        jsonBody == null
+            ? HttpRequest.BodyPublishers.noBody()
+            : HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8));
     return HTTP.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
   }
 
-  static String basicAuth() {
-    String encoded =
-        Base64.getEncoder().encodeToString("test:test".getBytes(StandardCharsets.UTF_8));
-    return "Basic " + encoded;
+  private static final Object BEARER_LOCK = new Object();
+  private static volatile String cachedBearer;
+
+  /**
+   * Token do gestor de teste: faz bootstrap na primeira chamada; se o gestor
+   * ja existe (409), faz login. Em cache para nao repetir a cada teste.
+   */
+  static String bearer() throws Exception {
+    synchronized (BEARER_LOCK) {
+      if (cachedBearer != null) {
+        return cachedBearer;
+      }
+
+      // tenant padrao e criado pelo bootstrap; aguarda a app estar de pe
+      waitForApplication();
+
+      var bootstrap = exchange(
+          "POST",
+          "/api/v1/auth/bootstrap",
+          "{\"name\":\"Gestor Teste\",\"email\":\"gestor@test.local\","
+              + "\"password\":\"senha-segura-123\"}",
+          null);
+      String token = extractAccessToken(bootstrap.body());
+      if (token == null) {
+        // 409: gestor ja existe nesta base (ex.: contexto recriado)
+        var login = exchange(
+            "POST",
+            "/api/v1/auth/login",
+            "{\"email\":\"gestor@test.local\",\"password\":\"senha-segura-123\"}",
+            null);
+        token = extractAccessToken(login.body());
+      }
+      if (token == null) {
+        throw new IllegalStateException("Nao foi possivel obter token do gestor de teste");
+      }
+      cachedBearer = token;
+      return token;
+    }
+  }
+
+  private static void waitForApplication() throws Exception {
+    for (int i = 0; i < 120; i++) {
+      try {
+        var response = call("GET", "/actuator/health", null);
+        if (response.statusCode() == 200) {
+          return;
+        }
+      } catch (Exception e) {
+        // app ainda subindo
+      }
+      Thread.sleep(250);
+    }
+    throw new IllegalStateException("Aplicacao nao ficou pronta a tempo");
+  }
+
+  private static String extractAccessToken(String json) {
+    if (json == null || !json.contains("\"accessToken\"")) {
+      return null;
+    }
+    int start = json.indexOf("\"accessToken\":\"") + "\"accessToken\":\"".length();
+    return json.substring(start, json.indexOf('"', start));
+  }
+
+  static String extractId(String json) {
+    int start = json.indexOf("\"id\":\"") + 6;
+    return json.substring(start, json.indexOf('"', start));
   }
 }

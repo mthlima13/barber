@@ -47,7 +47,7 @@ public class BarberAppService {
 
   @Transactional
   public BarberResponse create(BarberRequest request) {
-    UUID tenantId = tenants.requireDefaultTenantId();
+    UUID tenantId = tenants.requireCurrentTenantId();
     if (request.userId() != null && !staffJdbc.userExists(request.userId())) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "Usuario vinculado nao existe: " + request.userId());
@@ -59,7 +59,7 @@ public class BarberAppService {
 
   @Transactional(readOnly = true)
   public List<BarberResponse> list() {
-    UUID tenantId = tenants.requireDefaultTenantId();
+    UUID tenantId = tenants.requireCurrentTenantId();
     return barbers.findAllByTenantIdOrderByCreatedAtAsc(tenantId).stream()
         .map(BarberResponse::from)
         .toList();
@@ -121,7 +121,7 @@ public class BarberAppService {
   }
 
   private BarberJpaEntity findTenantBarber(UUID id) {
-    UUID tenantId = tenants.requireDefaultTenantId();
+    UUID tenantId = tenants.requireCurrentTenantId();
     return barbers
         .findByIdAndTenantId(id, tenantId)
         .orElseThrow(

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
@@ -34,6 +35,27 @@ public class TenantJpaEntity {
   private Instant createdAt;
 
   protected TenantJpaEntity() {}
+
+  private TenantJpaEntity(String slug, String name, String timezone) {
+    this.slug = slug;
+    this.name = name;
+    this.timezone = timezone;
+  }
+
+  /** Fabrica usada pelo bootstrap do modulo auth (spec, secao 2). */
+  public static TenantJpaEntity novo(String slug, String name, String timezone) {
+    return new TenantJpaEntity(slug, name, timezone);
+  }
+
+  @PrePersist
+  void onCreate() {
+    if (status == null) {
+      status = "ACTIVE";
+    }
+    if (createdAt == null) {
+      createdAt = Instant.now();
+    }
+  }
 
   public UUID getId() {
     return id;

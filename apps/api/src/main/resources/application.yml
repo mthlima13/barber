@@ -43,5 +43,11 @@ logging:
     root: INFO
 
 barberflow:
-  # Tenant do MVP (uma barbearia no lancamento); substituido pelo auth quando existir
+  # Tenant do MVP (uma barbearia no lancamento); usado pelo bootstrap do auth
   default-tenant-slug: ${BARBERSHOP_DEFAULT_TENANT_SLUG:barbearia-piloto}
+  default-tenant-name: ${BARBERSHOP_DEFAULT_TENANT_NAME:Barbearia Piloto}
+  default-tenant-timezone: ${BARBERSHOP_DEFAULT_TIMEZONE:America/Sao_Paulo}
+  auth:
+    # HS256, minimo de 32 bytes; troque em producao via variavel de ambiente
+    jwt-secret: ${AUTH_JWT_SECRET:dev-secret-change-me-32-bytes-minimum!!}
+    jwt-ttl-minutes: ${AUTH_JWT_TTL_MINUTES:720}

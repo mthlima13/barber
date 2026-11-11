@@ -32,7 +32,7 @@ public class ServiceAppService {
 
   @Transactional
   public ServiceResponse create(ServiceRequest request) {
-    UUID tenantId = tenants.requireDefaultTenantId();
+    UUID tenantId = tenants.requireCurrentTenantId();
     ServiceJpaEntity entity =
         ServiceJpaEntity.novo(
             tenantId,
@@ -45,7 +45,7 @@ public class ServiceAppService {
 
   @Transactional(readOnly = true)
   public List<ServiceResponse> list() {
-    UUID tenantId = tenants.requireDefaultTenantId();
+    UUID tenantId = tenants.requireCurrentTenantId();
     return services.findAllByTenantIdOrderByCreatedAtAsc(tenantId).stream()
         .map(ServiceResponse::from)
         .toList();
@@ -71,7 +71,7 @@ public class ServiceAppService {
   }
 
   private ServiceJpaEntity findTenantService(UUID id) {
-    UUID tenantId = tenants.requireDefaultTenantId();
+    UUID tenantId = tenants.requireCurrentTenantId();
     return services
         .findByIdAndTenantId(id, tenantId)
         .orElseThrow(
