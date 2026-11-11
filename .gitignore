@@ -1,0 +1,23 @@
+# Java
+target/
+*.class
+
+# Ambientes
+.env
+.env.local
+!.env.example
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Node/Next.js (futuro apps/web)
+node_modules/
+.next/
+out/
+
+# Logs e SO
+*.log
+.DS_Store
+Thumbs.db

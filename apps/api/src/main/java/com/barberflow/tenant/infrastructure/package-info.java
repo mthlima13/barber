@@ -1,0 +1,7 @@
+/**
+ * Camada 'infrastructure' do modulo 'tenant' do monolito modular BarberFlow.
+ *
+ * <p>Ver especificacao: BARBERFLOW_ARQUITETURA.md (secao 4).
+ */
+package com.barberflow.tenant.infrastructure;
+

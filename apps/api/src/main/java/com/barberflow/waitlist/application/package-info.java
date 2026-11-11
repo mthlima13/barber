@@ -1,0 +1,7 @@
+/**
+ * Camada 'application' do modulo 'waitlist' do monolito modular BarberFlow.
+ *
+ * <p>Ver especificacao: BARBERFLOW_ARQUITETURA.md (secao 4).
+ */
+package com.barberflow.waitlist.application;
+
