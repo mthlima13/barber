@@ -1,0 +1,4 @@
+# Normalizar line endings: LF em texto versionado, sem conversao do Git
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf

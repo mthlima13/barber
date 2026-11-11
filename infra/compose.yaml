@@ -1,0 +1,40 @@
+# BarberFlow — ambiente de desenvolvimento (spec, secao 13)
+# Uso: docker compose -f infra/compose.yaml up --build
+#
+# Servicos: postgres + api. O app web (Next.js) entra aqui quando existir.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: barberflow
+      POSTGRES_USER: barberflow
+      POSTGRES_PASSWORD: change-me-local-only
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barberflow -d barberflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/barberflow
+      POSTGRES_USER: barberflow
+      POSTGRES_PASSWORD: change-me-local-only
+      SERVER_PORT: 8080
+    ports:
+      # Host 8081: a porta 8080 do host ja e ocupada por outro container (ironmind-api)
+      - "8081:8080"
+
+volumes:
+  postgres_data:
