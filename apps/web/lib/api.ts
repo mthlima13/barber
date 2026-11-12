@@ -199,3 +199,205 @@ export function acceptOffer(token: string) {
   // O token no caminho e a credencial; sem corpo (201 com a reserva).
   return request<Appointment>("POST", `/api/v1/customer/offers/${token}/accept`);
 }
+
+// ------------------------------------------------------------------ gestor
+
+export type Me = {
+  id: string;
+  name: string;
+  email: string;
+  tenantId: string;
+  role: string;
+};
+
+export type LoginResponse = {
+  accessToken: string;
+  tokenType: string;
+  expiresInSeconds: number;
+  user: Me;
+  tenantId: string;
+  role: string;
+};
+
+export function login(email: string, password: string) {
+  return request<LoginResponse>("POST", "/api/v1/auth/login", {
+    json: { email, password },
+  });
+}
+
+/** Reserva na agenda do gestor: nome do cliente resolvido? Nao — o payload
+ * traz ids; a UI resolve nomes pelos catalogos de servicos/profissionais. */
+export function getAgenda(date: string, authToken: string, barberId?: string) {
+  const query = new URLSearchParams({ date });
+  if (barberId) query.set("barberId", barberId);
+  return request<Appointment[]>(
+    "GET",
+    `/api/v1/dashboard/appointments?${query}`,
+    { token: authToken },
+  );
+}
+
+export function updateAppointmentStatus(
+  appointmentId: string,
+  status: string,
+  authToken: string,
+) {
+  return request<Appointment>(
+    "PATCH",
+    `/api/v1/dashboard/appointments/${appointmentId}/status`,
+    { json: { status }, token: authToken },
+  );
+}
+
+// --------------------------------------------------- dashboard: servicos
+
+export type ServiceAdmin = {
+  id: string;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  priceCents: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export function listServices(authToken: string) {
+  return request<ServiceAdmin[]>("GET", "/api/v1/dashboard/services", {
+    token: authToken,
+  });
+}
+
+export function createService(
+  body: {
+    name: string;
+    description?: string;
+    durationMinutes: number;
+    priceCents: number;
+  },
+  authToken: string,
+) {
+  return request<ServiceAdmin>("POST", "/api/v1/dashboard/services", {
+    json: body,
+    token: authToken,
+  });
+}
+
+export function updateService(
+  serviceId: string,
+  body: {
+    name?: string;
+    description?: string;
+    durationMinutes?: number;
+    priceCents?: number;
+    active?: boolean;
+  },
+  authToken: string,
+) {
+  return request<ServiceAdmin>(
+    "PATCH",
+    `/api/v1/dashboard/services/${serviceId}`,
+    { json: body, token: authToken },
+  );
+}
+
+export function deleteService(serviceId: string, authToken: string) {
+  return request<void>("DELETE", `/api/v1/dashboard/services/${serviceId}`, {
+    token: authToken,
+  });
+}
+
+// ------------------------------------------------ dashboard: profissionais
+
+export type BarberAdmin = {
+  id: string;
+  userId: string | null;
+  displayName: string;
+  active: boolean;
+  createdAt: string;
+};
+
+export function listBarbers(authToken: string) {
+  return request<BarberAdmin[]>("GET", "/api/v1/dashboard/barbers", {
+    token: authToken,
+  });
+}
+
+export function createBarber(displayName: string, authToken: string) {
+  return request<BarberAdmin>("POST", "/api/v1/dashboard/barbers", {
+    json: { displayName },
+    token: authToken,
+  });
+}
+
+export function updateBarber(
+  barberId: string,
+  body: { displayName?: string; active?: boolean },
+  authToken: string,
+) {
+  return request<BarberAdmin>("PATCH", `/api/v1/dashboard/barbers/${barberId}`, {
+    json: body,
+    token: authToken,
+  });
+}
+
+export function deleteBarber(barberId: string, authToken: string) {
+  return request<void>("DELETE", `/api/v1/dashboard/barbers/${barberId}`, {
+    token: authToken,
+  });
+}
+
+export type BusinessHour = {
+  weekday: number;
+  startLocal: string;
+  endLocal: string;
+};
+
+export function getBarberHours(barberId: string, authToken: string) {
+  return request<BusinessHour[]>(
+    "GET",
+    `/api/v1/dashboard/barbers/${barberId}/hours`,
+    { token: authToken },
+  );
+}
+
+export function putBarberHours(
+  barberId: string,
+  hours: BusinessHour[],
+  authToken: string,
+) {
+  return request<BusinessHour[]>(
+    "PUT",
+    `/api/v1/dashboard/barbers/${barberId}/hours`,
+    { json: hours, token: authToken },
+  );
+}
+
+// ------------------------------------------- dashboard: lista de espera
+
+export type WaitlistEntry = {
+  id: string;
+  tenantId: string;
+  barberId: string;
+  customerId: string;
+  serviceId: string;
+  desiredStartAt: string;
+  desiredEndAt: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string | null;
+};
+
+export function listWaitlist(authToken: string) {
+  return request<WaitlistEntry[]>("GET", "/api/v1/dashboard/waitlist", {
+    token: authToken,
+  });
+}
+
+/** Expira ofertas vencidas e oferece slots livres aos inscritos. */
+export function processWaitlist(authToken: string) {
+  return request<void>("POST", "/api/v1/dashboard/waitlist/process", {
+    token: authToken,
+  });
+}
