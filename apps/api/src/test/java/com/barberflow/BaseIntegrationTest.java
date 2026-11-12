@@ -43,6 +43,13 @@ public abstract class BaseIntegrationTest {
     registry.add("barberflow.ratelimit.public-read-per-minute", () -> "300");
     registry.add("barberflow.ratelimit.public-write-per-minute", () -> "150");
     registry.add("barberflow.ratelimit.auth-per-minute", () -> "15");
+    // WhatsApp: webhook verificavel nos testes; worker com polling manual
+    // (intervalo de 1h evita corrida do @Scheduled com o runOnce do teste) e
+    // backoff zero para esgotar tentativas dentro do teste
+    registry.add("barberflow.whatsapp.verify-token", () -> "test-verify-token");
+    registry.add("barberflow.whatsapp.app-secret", () -> "test-app-secret");
+    registry.add("barberflow.whatsapp.poll-interval-millis", () -> "3600000");
+    registry.add("barberflow.whatsapp.first-backoff-seconds", () -> "0");
   }
 
   private static final HttpClient HTTP = HttpClient.newHttpClient();

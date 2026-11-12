@@ -51,6 +51,14 @@ public class OutboxEventJpaEntity {
   @Column(name = "idempotency_key", updatable = false)
   private String idempotencyKey;
 
+  /** ID da mensagem aceita pela Cloud API (webhook correlaciona). */
+  @Column(name = "message_id")
+  private String messageId;
+
+  /** Ultimo erro de entrega (diagnostico no dashboard; sem segredos). */
+  @Column(name = "last_error")
+  private String lastError;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
@@ -118,5 +126,41 @@ public class OutboxEventJpaEntity {
 
   public Instant getCreatedAt() {
     return createdAt;
+  }
+
+  public String getMessageId() {
+    return messageId;
+  }
+
+  public String getLastError() {
+    return lastError;
+  }
+
+  public Long getVersion() {
+    return version;
+  }
+
+  /** Entrega confirmada pela Cloud API; tenta uma unica vez (uso unico). */
+  public void marcarEnviado(String messageId) {
+    this.status = "SENT";
+    this.attemptCount++;
+    this.messageId = messageId;
+    this.nextAttemptAt = null;
+  }
+
+  /** Falha transitoria: tenta de novo apos o backoff informado. */
+  public void registrarFalha(String cause, Instant nextAttemptAt) {
+    this.status = "PENDING";
+    this.attemptCount++;
+    this.lastError = cause;
+    this.nextAttemptAt = nextAttemptAt;
+  }
+
+  /** Erro permanente/esgotado: vai para analise (spec, linha 233). */
+  public void marcarFalhaFinal(String cause) {
+    this.status = "FAILED";
+    this.attemptCount++;
+    this.lastError = cause;
+    this.nextAttemptAt = null;
   }
 }

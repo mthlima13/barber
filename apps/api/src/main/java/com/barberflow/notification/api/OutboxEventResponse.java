@@ -14,6 +14,8 @@ public record OutboxEventResponse(
     int attemptCount,
     Instant nextAttemptAt,
     String idempotencyKey,
+    String messageId,
+    String lastError,
     Instant createdAt) {
 
   public static OutboxEventResponse from(OutboxEventJpaEntity entity) {
@@ -26,6 +28,8 @@ public record OutboxEventResponse(
         entity.getAttemptCount(),
         entity.getNextAttemptAt(),
         entity.getIdempotencyKey(),
+        entity.getMessageId(),
+        entity.getLastError(),
         entity.getCreatedAt());
   }
 }

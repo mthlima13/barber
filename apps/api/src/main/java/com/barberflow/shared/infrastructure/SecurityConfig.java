@@ -55,6 +55,10 @@ public class SecurityConfig {
                     // caminho e a propria credencial (spec, secao 10)
                     .requestMatchers("/api/v1/customer/offers/*/accept")
                     .permitAll()
+                    // Webhook do WhatsApp: protegido por assinatura
+                    // X-Hub-Signature-256 no proprio controller (spec, linha 221)
+                    .requestMatchers("/api/v1/webhooks/whatsapp")
+                    .permitAll()
                     // Painel do gestor (agenda do barbeiro entra depois: BARBER)
                     .requestMatchers("/api/v1/dashboard/**")
                     .hasRole("MANAGER")
