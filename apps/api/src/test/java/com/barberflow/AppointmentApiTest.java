@@ -47,7 +47,9 @@ class AppointmentApiTest extends BaseIntegrationTest {
   }
 
   private java.net.http.HttpResponse<String> book(String startLocal) throws Exception {
-    return call("POST", "/api/v1/public/appointments", body(startLocal));
+    // Idempotency-Key obrigatoria (spec, linha 149): chave unica por chamada
+    return callWithHeader(
+        "POST", "/api/v1/public/appointments", body(startLocal), UUID.randomUUID().toString());
   }
 
   @org.junit.jupiter.api.Test
@@ -75,6 +77,18 @@ class AppointmentApiTest extends BaseIntegrationTest {
     String firstId = extractId(first.body());
     String replayId = extractId(replay.body());
     assertThat(replayId).isEqualTo(firstId);
+  }
+
+  @org.junit.jupiter.api.Test
+  void missingIdempotencyKeyReturns400() throws Exception {
+    var response = call("POST", "/api/v1/public/appointments", body("09:30"));
+
+    // Mutacao critica exige chave (spec, linha 149); handler de
+    // MissingRequestHeaderException responde problem+json
+    assertThat(response.statusCode()).isEqualTo(400);
+    assertThat(response.headers().firstValue("Content-Type").orElse(""))
+        .contains("application/problem+json");
+    assertThat(response.body()).contains("Idempotency-Key");
   }
 
   @org.junit.jupiter.api.Test

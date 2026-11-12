@@ -63,7 +63,8 @@ class WaitlistApiTest extends BaseIntegrationTest {
     String bookBody = "{\"slug\":\"" + SLUG + "\",\"barberId\":\"" + barberId
         + "\",\"serviceId\":\"" + serviceId + "\",\"startsAt\":\"" + slotIso(localTime)
         + "\",\"customer\":{\"name\":\"Ocupante\",\"phone\":\"+5511970000001\"}}";
-    var booked = call("POST", "/api/v1/public/appointments", bookBody);
+    var booked = callWithHeader(
+        "POST", "/api/v1/public/appointments", bookBody, UUID.randomUUID().toString());
     assertThat(booked.statusCode()).isEqualTo(201);
     String appointmentId = extractId(booked.body());
     String manageToken = extractJson(booked.body(), "manageToken");
@@ -255,6 +256,23 @@ class WaitlistApiTest extends BaseIntegrationTest {
   /** 0=domingo ... 6=sabado (DOW do PostgreSQL). */
   private static int weekdayOf(LocalDate date) {
     return date.getDayOfWeek().getValue() % 7;
+  }
+
+  /** POST com header extra (Idempotency-Key obrigatoria na criacao de reserva). */
+  private static java.net.http.HttpResponse<String> callWithHeader(
+      String method, String path, String jsonBody, String idempotencyKey) throws Exception {
+    var request =
+        java.net.http.HttpRequest.newBuilder(
+                java.net.URI.create("http://localhost:" + PORT + path))
+            .header("Content-Type", "application/json")
+            .header("Idempotency-Key", idempotencyKey)
+            .method(
+                method,
+                java.net.http.HttpRequest.BodyPublishers.ofString(
+                    jsonBody, java.nio.charset.StandardCharsets.UTF_8))
+            .build();
+    return java.net.http.HttpClient.newHttpClient()
+        .send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
   }
 
   private static String extractJson(String json, String field) {

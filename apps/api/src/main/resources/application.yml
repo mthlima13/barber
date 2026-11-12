@@ -58,3 +58,9 @@ barberflow:
   waitlist:
     # Validade da oferta de horario (spec, secao 9.2.4: "uma pessoa por vez")
     offer-ttl-minutes: ${WAITLIST_OFFER_TTL_MINUTES:5}
+  ratelimit:
+    # Limites por IP em janela deslizante de 60s (spec, linhas 180-188;
+    # single-instance no MVP, Redis distribuido na Fase 4)
+    public-read-per-minute: ${RATE_LIMIT_PUBLIC_READ_PER_MINUTE:60}
+    public-write-per-minute: ${RATE_LIMIT_PUBLIC_WRITE_PER_MINUTE:20}
+    auth-per-minute: ${RATE_LIMIT_AUTH_PER_MINUTE:10}

@@ -43,7 +43,9 @@ class NotificationApiTest extends BaseIntegrationTest {
   }
 
   private java.net.http.HttpResponse<String> book(String localTime) throws Exception {
-    return call("POST", "/api/v1/public/appointments", bookBody(localTime));
+    // Idempotency-Key obrigatoria (spec, linha 149)
+    return callWithHeader(
+        "POST", "/api/v1/public/appointments", bookBody(localTime), UUID.randomUUID().toString());
   }
 
   @Test

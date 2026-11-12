@@ -38,6 +38,11 @@ public abstract class BaseIntegrationTest {
     registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
     registry.add("spring.datasource.username", POSTGRES::getUsername);
     registry.add("spring.datasource.password", POSTGRES::getPassword);
+    // Rate limit: limites de teste — rotas publicas altos (a suite inteira
+    // passa pelo mesmo IP) e auth baixo para o teste de 429 (RateLimitApiTest)
+    registry.add("barberflow.ratelimit.public-read-per-minute", () -> "300");
+    registry.add("barberflow.ratelimit.public-write-per-minute", () -> "150");
+    registry.add("barberflow.ratelimit.auth-per-minute", () -> "15");
   }
 
   private static final HttpClient HTTP = HttpClient.newHttpClient();
