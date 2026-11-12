@@ -1,7 +1,8 @@
 # BarberFlow — ambiente de desenvolvimento (spec, secao 13)
 # Uso: docker compose -f infra/compose.yaml up --build
 #
-# Servicos: postgres + api. O app web (Next.js) entra aqui quando existir.
+# Servicos: postgres + api + web (Next.js). API no host 8081 (a 8080 ja
+# esta ocupada por outro container); web em http://localhost:3000.
 
 services:
   postgres:
@@ -35,6 +36,19 @@ services:
     ports:
       # Host 8081: a porta 8080 do host ja e ocupada por outro container (ironmind-api)
       - "8081:8080"
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    depends_on:
+      - api
+    environment:
+      # Consumo do browser: host mapeado da API (8081 no host)
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8081
+      NEXT_PUBLIC_DEFAULT_SLUG: barbearia-piloto
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:

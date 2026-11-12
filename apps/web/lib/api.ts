@@ -1,0 +1,201 @@
+/**
+ * Cliente da API BarberFlow (spec, secao 10): rotas publicas e rotas de
+ * cliente autenticadas pelo token de gerenciamento (Bearer). Base URL
+ * configuravel por NEXT_PUBLIC_API_BASE_URL (spec, linha 245).
+ */
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+
+/** Barbearia padrao no MVP de instancia unica. */
+export const DEFAULT_SLUG =
+  process.env.NEXT_PUBLIC_DEFAULT_SLUG ?? "barbearia-piloto";
+
+export type PublicBarbershop = {
+  id: string;
+  slug: string;
+  name: string;
+  timezone: string;
+};
+
+export type PublicService = {
+  id: string;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  priceCents: number;
+};
+
+export type PublicBarber = {
+  id: string;
+  displayName: string;
+};
+
+export type Slot = { startAt: string; endAt: string };
+
+export type Availability = {
+  date: string;
+  timezone: string;
+  barberId: string;
+  serviceId: string;
+  durationMinutes: number;
+  slots: Slot[];
+};
+
+export type Appointment = {
+  id: string;
+  tenantId: string;
+  barberId: string;
+  customerId: string;
+  serviceId: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  priceCents: number;
+  durationMinutes: number;
+  /** Somente na criacao (link seguro — spec, secao 9.1). */
+  manageToken?: string | null;
+};
+
+/** Erro de API: problem+json (RFC 9457) ou fallback generico. */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, detail: string) {
+    super(detail);
+    this.status = status;
+  }
+}
+
+async function parseProblem(response: Response): Promise<never> {
+  let detail = `Erro ${response.status}`;
+  try {
+    const body = (await response.json()) as { detail?: string; title?: string };
+    detail = body.detail ?? body.title ?? detail;
+  } catch {
+    // corpo nao-JSON: mantem o detalhe generico
+  }
+  throw new ApiError(response.status, detail);
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  options: {
+    json?: unknown;
+    token?: string;
+    idempotencyKey?: string;
+  } = {},
+): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (options.json !== undefined) headers["Content-Type"] = "application/json";
+  if (options.token) headers["Authorization"] = `Bearer ${options.token}`;
+  if (options.idempotencyKey) {
+    headers["Idempotency-Key"] = options.idempotencyKey;
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers,
+    body: options.json === undefined ? undefined : JSON.stringify(options.json),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await parseProblem(response);
+  }
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return (await response.json()) as T;
+}
+
+// ------------------------------------------------------------------ publico
+
+export function getBarbershop(slug: string) {
+  return request<PublicBarbershop>(
+    "GET",
+    `/api/v1/public/barbershops/${slug}`,
+  );
+}
+
+export function getServices(slug: string) {
+  return request<PublicService[]>(
+    "GET",
+    `/api/v1/public/barbershops/${slug}/services`,
+  );
+}
+
+export function getBarbers(slug: string) {
+  return request<PublicBarber[]>(
+    "GET",
+    `/api/v1/public/barbershops/${slug}/barbers`,
+  );
+}
+
+export function getAvailability(
+  slug: string,
+  barberId: string,
+  serviceId: string,
+  date: string,
+) {
+  const query = new URLSearchParams({ barberId, serviceId, date });
+  return request<Availability>(
+    "GET",
+    `/api/v1/public/barbershops/${slug}/availability?${query}`,
+  );
+}
+
+export function createAppointment(
+  slug: string,
+  body: {
+    slug: string;
+    barberId: string;
+    serviceId: string;
+    startsAt: string;
+    customer: { name: string; phone: string };
+  },
+  idempotencyKey: string,
+) {
+  // Idempotencia obrigatoria (spec, linha 149): replay com a mesma chave
+  // retorna a mesma reserva (200) sem duplicar.
+  return request<Appointment>("POST", "/api/v1/public/appointments", {
+    json: body,
+    idempotencyKey,
+  });
+}
+
+// ------------------------------------------------- cliente (link seguro)
+
+export function getAppointment(appointmentId: string, token: string) {
+  return request<Appointment>(
+    "GET",
+    `/api/v1/customer/appointments/${appointmentId}`,
+    { token },
+  );
+}
+
+export function cancelAppointment(appointmentId: string, token: string) {
+  return request<Appointment>(
+    "POST",
+    `/api/v1/customer/appointments/${appointmentId}/cancel`,
+    { token },
+  );
+}
+
+export function rescheduleAppointment(
+  appointmentId: string,
+  token: string,
+  startsAt: string,
+) {
+  return request<Appointment>(
+    "POST",
+    `/api/v1/customer/appointments/${appointmentId}/reschedule`,
+    { json: { startsAt }, token },
+  );
+}
+
+/** Oferta da lista de espera: aceita vaga com o token do caminho. */
+export function acceptOffer(token: string) {
+  // O token no caminho e a credencial; sem corpo (201 com a reserva).
+  return request<Appointment>("POST", `/api/v1/customer/offers/${token}/accept`);
+}
