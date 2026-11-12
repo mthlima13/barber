@@ -6,8 +6,11 @@ import com.barberflow.appointment.infrastructure.AppointmentJpaEntity;
 import com.barberflow.appointment.infrastructure.AppointmentRepository;
 import com.barberflow.appointment.infrastructure.CustomerJpaEntity;
 import com.barberflow.appointment.infrastructure.CustomerRepository;
+import com.barberflow.audit.application.AuditService;
 import com.barberflow.auth.domain.AuthPrincipal;
 import com.barberflow.auth.infrastructure.JwtService;
+import com.barberflow.notification.application.OutboxEvents;
+import com.barberflow.notification.application.OutboxService;
 import com.barberflow.service.infrastructure.ServiceJpaEntity;
 import com.barberflow.service.infrastructure.ServiceRepository;
 import com.barberflow.staff.infrastructure.BarberJpaEntity;
@@ -56,6 +59,8 @@ public class AppointmentAppService {
       availabilityJdbc;
   private final SlotValidator slotValidator;
   private final com.barberflow.waitlist.application.WaitlistService waitlist;
+  private final OutboxService outbox;
+  private final AuditService audits;
   private final JwtService jwt;
 
   public AppointmentAppService(
@@ -67,6 +72,8 @@ public class AppointmentAppService {
       com.barberflow.availability.infrastructure.AvailabilityJdbcRepository availabilityJdbc,
       SlotValidator slotValidator,
       com.barberflow.waitlist.application.WaitlistService waitlist,
+      OutboxService outbox,
+      AuditService audits,
       JwtService jwt) {
     this.tenants = tenants;
     this.barbers = barbers;
@@ -76,6 +83,8 @@ public class AppointmentAppService {
     this.availabilityJdbc = availabilityJdbc;
     this.slotValidator = slotValidator;
     this.waitlist = waitlist;
+    this.outbox = outbox;
+    this.audits = audits;
     this.jwt = jwt;
   }
 
@@ -145,6 +154,25 @@ public class AppointmentAppService {
               request.startsAt().atZone(zone).toLocalDate()));
     }
 
+    // Evento de notificacao na MESMA transacao (spec, secao 9.1.5); chave de
+    // idempotencia evita notificacao duplicada em replay.
+    outbox.append(
+        tenant.getId(),
+        OutboxEvents.APPOINTMENT_CREATED,
+        idempotencyKey == null || idempotencyKey.isBlank()
+            ? null
+            : "appointment-created:" + idempotencyKey,
+        java.util.Map.of(
+            "appointmentId", saved.getId(),
+            "tenantId", tenant.getId(),
+            "barberId", barber.getId(),
+            "customerId", customer.getId(),
+            "serviceId", service.getId(),
+            "startsAt", request.startsAt(),
+            "endsAt", endsAt,
+            "status", "PENDING",
+            "source", "PUBLIC"));
+
     return new CreateResult(toResponse(saved, manageToken(saved)), true);
   }
 
@@ -161,11 +189,22 @@ public class AppointmentAppService {
   @Transactional
   public AppointmentResponse cancelForCustomer(AuthPrincipal principal, UUID appointmentId) {
     AppointmentJpaEntity entity = loadForCustomer(principal, appointmentId);
+    String previousStatus = entity.getStatus();
     transition(entity, "CANCELLED");
+    // Evento de notificacao na MESMA transacao (spec, secao 9.2.2).
+    outbox.append(
+        entity.getTenantId(),
+        OutboxEvents.APPOINTMENT_CANCELLED,
+        null,
+        java.util.Map.of(
+            "appointmentId", entity.getId(),
+            "tenantId", entity.getTenantId(),
+            "previousStatus", previousStatus,
+            "startsAt", entity.getStartsAt(),
+            "status", "CANCELLED"));
     // Horario liberado fica elegivel para a lista de espera (spec, secao 9.2.3);
     // ofertas registradas na mesma transacao.
     waitlist.process(entity.getTenantId());
-    // TODO(fase-4): evento AppointmentCancelled na outbox, na mesma transacao.
     return toResponse(entity, null);
   }
 
@@ -185,8 +224,19 @@ public class AppointmentAppService {
 
     Instant newEndsAt = newStartsAt.plus(Duration.ofMinutes(entity.getDurationMinutesSnapshot()));
     validateSlot(tenant, null, service, newStartsAt, newEndsAt, entity.getId());
+    Instant previousStartsAt = entity.getStartsAt();
     entity.remarcar(newStartsAt, newEndsAt);
-    // TODO(fase-4): evento de reagendamento na outbox.
+    outbox.append(
+        entity.getTenantId(),
+        OutboxEvents.APPOINTMENT_RESCHEDULED,
+        null,
+        java.util.Map.of(
+            "appointmentId", entity.getId(),
+            "tenantId", entity.getTenantId(),
+            "previousStartsAt", previousStartsAt,
+            "startsAt", newStartsAt,
+            "endsAt", newEndsAt,
+            "status", entity.getStatus()));
     return toResponse(entity, null);
   }
 
@@ -210,16 +260,38 @@ public class AppointmentAppService {
     return rows.stream().map(entity -> toResponse(entity, null)).toList();
   }
 
-  /** Atualizacao de status pelo gestor, respeitando a maquina de estados. */
+  /**
+   * Atualizacao de status pelo gestor, respeitando a maquina de estados.
+   * Toda transicao e auditada com o autor (spec, secao 6); CANCELLED tambem
+   * emite evento de notificacao na outbox.
+   */
   @Transactional
-  public AppointmentResponse updateStatus(UUID tenantId, UUID appointmentId, String newStatus) {
+  public AppointmentResponse updateStatus(
+      UUID tenantId, UUID appointmentId, String newStatus, AuthPrincipal actor) {
     AppointmentJpaEntity entity =
         appointments
             .findByIdAndTenantId(appointmentId, tenantId)
             .orElseThrow(() -> notFound("Reserva nao encontrada para esta barbearia"));
+    String previousStatus = entity.getStatus();
     transition(entity, newStatus);
+    audits.record(
+        tenantId,
+        actor != null ? actor.userId() : null,
+        "APPOINTMENT_" + newStatus,
+        AuditService.ENTITY_APPOINTMENT,
+        entity.getId());
     // So CANCELLED libera o intervalo (COMPLETED/NO_SHOW o consumiram).
     if ("CANCELLED".equals(newStatus)) {
+      outbox.append(
+          tenantId,
+          OutboxEvents.APPOINTMENT_CANCELLED,
+          null,
+          java.util.Map.of(
+              "appointmentId", entity.getId(),
+              "tenantId", tenantId,
+              "previousStatus", previousStatus,
+              "startsAt", entity.getStartsAt(),
+              "status", "CANCELLED"));
       waitlist.process(tenantId);
     }
     return toResponse(entity, null);

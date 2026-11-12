@@ -21,6 +21,8 @@ import com.barberflow.waitlist.infrastructure.WaitlistEntryJpaEntity;
 import com.barberflow.waitlist.infrastructure.WaitlistEntryRepository;
 import com.barberflow.appointment.infrastructure.CustomerJpaEntity;
 import com.barberflow.appointment.infrastructure.CustomerRepository;
+import com.barberflow.notification.application.OutboxEvents;
+import com.barberflow.notification.application.OutboxService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
@@ -55,6 +57,7 @@ public class WaitlistService {
   private final AppointmentRepository appointments;
   private final SlotValidator slotValidator;
   private final WaitlistExpiryService expiry;
+  private final OutboxService outbox;
   private final JwtService jwt;
   private final long offerTtlMinutes;
 
@@ -68,6 +71,7 @@ public class WaitlistService {
       AppointmentRepository appointments,
       SlotValidator slotValidator,
       WaitlistExpiryService expiry,
+      OutboxService outbox,
       JwtService jwt,
       @Value("${barberflow.waitlist.offer-ttl-minutes:5}") long offerTtlMinutes) {
     this.tenants = tenants;
@@ -79,6 +83,7 @@ public class WaitlistService {
     this.appointments = appointments;
     this.slotValidator = slotValidator;
     this.expiry = expiry;
+    this.outbox = outbox;
     this.jwt = jwt;
     this.offerTtlMinutes = offerTtlMinutes;
   }
@@ -188,8 +193,19 @@ public class WaitlistService {
                   sha256(jwt.offerToken(offerId)),
                   expiresAt));
       entry.oferecer(expiresAt);
-      // TODO(fase-4): evento WAITLIST_SLOT_AVAILABLE na outbox (entrega por
-      // WhatsApp); no MVP o token e rederivavel pelo dono da inscricao.
+      // Evento de entrega na MESMA transacao da oferta (spec, secao 9.2.4);
+      // worker de WhatsApp entra na Fase 4. Token nunca vai para o payload.
+      outbox.append(
+          tenantId,
+          OutboxEvents.WAITLIST_SLOT_AVAILABLE,
+          "waitlist-offer:" + offerId,
+          java.util.Map.of(
+              "offerId", offerId,
+              "entryId", entry.getId(),
+              "customerId", entry.getCustomerId(),
+              "startsAt", entry.getDesiredStartAt(),
+              "endsAt", entry.getDesiredEndAt(),
+              "expiresAt", expiresAt));
     }
   }
 
@@ -284,6 +300,21 @@ public class WaitlistService {
                 null));
     offer.aceitar();
     entry.cumprir();
+    // Reserva criada via lista de espera: evento na mesma transacao (9.1.5).
+    outbox.append(
+        tenant.getId(),
+        OutboxEvents.APPOINTMENT_CREATED,
+        "appointment-created:offer-" + offer.getId(),
+        java.util.Map.of(
+            "appointmentId", saved.getId(),
+            "tenantId", tenant.getId(),
+            "barberId", entry.getBarberId(),
+            "customerId", entry.getCustomerId(),
+            "serviceId", entry.getServiceId(),
+            "startsAt", offer.getStartsAt(),
+            "endsAt", offer.getEndsAt(),
+            "status", "PENDING",
+            "source", "WAITLIST"));
 
     return new AppointmentResponse(
         saved.getId(),

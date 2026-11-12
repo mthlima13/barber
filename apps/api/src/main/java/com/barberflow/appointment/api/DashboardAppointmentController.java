@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,8 +47,10 @@ public class DashboardAppointmentController {
 
   @PatchMapping("/{id}/status")
   public AppointmentResponse updateStatus(
-      @PathVariable UUID id, @Valid @RequestBody StatusUpdateRequest request) {
+      @AuthenticationPrincipal com.barberflow.auth.domain.AuthPrincipal principal,
+      @PathVariable UUID id,
+      @Valid @RequestBody StatusUpdateRequest request) {
     return appointments.updateStatus(
-        tenants.requireCurrentTenantId(), id, request.status());
+        tenants.requireCurrentTenantId(), id, request.status(), principal);
   }
 }
