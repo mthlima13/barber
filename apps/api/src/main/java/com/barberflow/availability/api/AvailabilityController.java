@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Disponibilidade publica (spec, secao 10): barbearia identificada pelo slug.
- *
- * <p>TODO(fase-4): rate limit por IP antes do lancamento publico.</p>
+ * Rate limit de leitura publica aplicado pelo
+ * {@link com.barberflow.shared.ratelimit.RateLimitFilter}.
  */
 @RestController
 @RequestMapping("/api/v1/public/barbershops")

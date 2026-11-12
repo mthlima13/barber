@@ -9,5 +9,8 @@ public interface ServiceRepository extends JpaRepository<ServiceJpaEntity, UUID>
 
   List<ServiceJpaEntity> findAllByTenantIdOrderByCreatedAtAsc(UUID tenantId);
 
+  /** Catalogo publico: apenas servicos ativos. */
+  List<ServiceJpaEntity> findAllByTenantIdAndActiveTrueOrderByCreatedAtAsc(UUID tenantId);
+
   Optional<ServiceJpaEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 }

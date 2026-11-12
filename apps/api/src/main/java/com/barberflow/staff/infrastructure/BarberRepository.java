@@ -9,5 +9,8 @@ public interface BarberRepository extends JpaRepository<BarberJpaEntity, UUID> {
 
   List<BarberJpaEntity> findAllByTenantIdOrderByCreatedAtAsc(UUID tenantId);
 
+  /** Catalogo publico: apenas profissionais ativos. */
+  List<BarberJpaEntity> findAllByTenantIdAndActiveTrueOrderByCreatedAtAsc(UUID tenantId);
+
   Optional<BarberJpaEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 }
