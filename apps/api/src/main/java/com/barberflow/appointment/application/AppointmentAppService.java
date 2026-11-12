@@ -62,6 +62,7 @@ public class AppointmentAppService {
   private final OutboxService outbox;
   private final AuditService audits;
   private final JwtService jwt;
+  private final com.barberflow.privacy.PrivacyProperties privacy;
 
   public AppointmentAppService(
       TenantRepository tenants,
@@ -74,7 +75,8 @@ public class AppointmentAppService {
       com.barberflow.waitlist.application.WaitlistService waitlist,
       OutboxService outbox,
       AuditService audits,
-      JwtService jwt) {
+      JwtService jwt,
+      com.barberflow.privacy.PrivacyProperties privacy) {
     this.tenants = tenants;
     this.barbers = barbers;
     this.services = services;
@@ -86,6 +88,7 @@ public class AppointmentAppService {
     this.outbox = outbox;
     this.audits = audits;
     this.jwt = jwt;
+    this.privacy = privacy;
   }
 
   /** Criacao de reserva com Idempotency-Key opcional (spec, secao 9.1). */
@@ -111,6 +114,12 @@ public class AppointmentAppService {
       throw badRequest("Horario da reserva ja passou");
     }
 
+    // LGPD (spec, linha 223): sem aceite da politica de privacidade, a
+    // coleta de dados pessoais nao acontece (base legal: consentimento).
+    if (!request.customer().consented()) {
+      throw badRequest("E necessario aceitar a politica de privacidade");
+    }
+
     BarberJpaEntity barber = requireActiveBarber(tenant.getId(), request.barberId());
     ServiceJpaEntity service = requireActiveService(tenant.getId(), request.serviceId());
     if (!service.isActive() || !barber.isActive()) {
@@ -126,6 +135,8 @@ public class AppointmentAppService {
 
     CustomerJpaEntity customer =
         getOrCreateCustomer(tenant.getId(), request.customer().name(), request.customer().phone());
+    customer.registrarConsentimento(
+        privacy.policyVersion() != null ? privacy.policyVersion() : "1.0", "web-booking");
 
     AppointmentJpaEntity saved;
     try {

@@ -51,7 +51,7 @@ class WaitlistApiTest extends BaseIntegrationTest {
   private String joinBody(String localTime, String phone) {
     return "{\"slug\":\"" + SLUG + "\",\"barberId\":\"" + barberId
         + "\",\"serviceId\":\"" + serviceId + "\",\"startsAt\":\"" + slotIso(localTime)
-        + "\",\"customer\":{\"name\":\"Cliente Fila\",\"phone\":\"" + phone + "\"}}";
+        + "\",\"customer\":{\"name\":\"Cliente Fila\",\"phone\":\"" + phone + "\",\"consented\":true}}";
   }
 
   private java.net.http.HttpResponse<String> join(String localTime, String phone) throws Exception {
@@ -62,7 +62,7 @@ class WaitlistApiTest extends BaseIntegrationTest {
   private String bookAndCancel(String localTime) throws Exception {
     String bookBody = "{\"slug\":\"" + SLUG + "\",\"barberId\":\"" + barberId
         + "\",\"serviceId\":\"" + serviceId + "\",\"startsAt\":\"" + slotIso(localTime)
-        + "\",\"customer\":{\"name\":\"Ocupante\",\"phone\":\"+5511970000001\"}}";
+        + "\",\"customer\":{\"name\":\"Ocupante\",\"phone\":\"+5511970000001\",\"consented\":true}}";
     var booked = callWithHeader(
         "POST", "/api/v1/public/appointments", bookBody, UUID.randomUUID().toString());
     assertThat(booked.statusCode()).isEqualTo(201);

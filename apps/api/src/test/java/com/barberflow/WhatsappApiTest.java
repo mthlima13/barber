@@ -54,7 +54,7 @@ class WhatsappApiTest extends BaseIntegrationTest {
   private String bookBody(String localTime) {
     return "{\"slug\":\"" + SLUG + "\",\"barberId\":\"" + barberId
         + "\",\"serviceId\":\"" + serviceId + "\",\"startsAt\":\"" + date + "T" + localTime
-        + ":00-03:00\",\"customer\":{\"name\":\"Cliente Whats\",\"phone\":\"+5511993000001\"}}";
+        + ":00-03:00\",\"customer\":{\"name\":\"Cliente Whats\",\"phone\":\"+5511993000001\",\"consented\":true}}";
   }
 
   @Test

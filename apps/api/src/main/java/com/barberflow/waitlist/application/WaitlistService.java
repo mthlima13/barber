@@ -59,6 +59,7 @@ public class WaitlistService {
   private final WaitlistExpiryService expiry;
   private final OutboxService outbox;
   private final JwtService jwt;
+  private final com.barberflow.privacy.PrivacyProperties privacy;
   private final long offerTtlMinutes;
 
   public WaitlistService(
@@ -73,6 +74,7 @@ public class WaitlistService {
       WaitlistExpiryService expiry,
       OutboxService outbox,
       JwtService jwt,
+      com.barberflow.privacy.PrivacyProperties privacy,
       @Value("${barberflow.waitlist.offer-ttl-minutes:5}") long offerTtlMinutes) {
     this.tenants = tenants;
     this.barbers = barbers;
@@ -85,6 +87,7 @@ public class WaitlistService {
     this.expiry = expiry;
     this.outbox = outbox;
     this.jwt = jwt;
+    this.privacy = privacy;
     this.offerTtlMinutes = offerTtlMinutes;
   }
 
@@ -112,6 +115,11 @@ public class WaitlistService {
     if (request.startsAt().isBefore(Instant.now())) {
       throw badRequest("Horario da inscricao ja passou");
     }
+    // LGPD (spec, linha 223): inscricao na lista de espera tambem coleta
+    // dados pessoais — exige aceite da politica de privacidade.
+    if (!request.customer().consented()) {
+      throw badRequest("E necessario aceitar a politica de privacidade");
+    }
     Instant endsAt = request.startsAt().plus(Duration.ofMinutes(service.getDurationMinutes()));
     slotValidator.validateWindow(tenant, barber.getId(), request.startsAt(), endsAt);
 
@@ -123,6 +131,8 @@ public class WaitlistService {
                     customers.save(
                         CustomerJpaEntity.novo(
                             tenant.getId(), request.customer().name(), request.customer().phone())));
+    customer.registrarConsentimento(
+        privacy.policyVersion() != null ? privacy.policyVersion() : "1.0", "web-waitlist");
 
     if (entries.existsByTenantIdAndCustomerIdAndBarberIdAndDesiredStartAtAndStatusIn(
         tenant.getId(),

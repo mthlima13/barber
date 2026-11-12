@@ -131,7 +131,7 @@ export default function BookingPage() {
           barberId,
           serviceId,
           startsAt: slotStart,
-          customer: { name: trimmedName, phone: trimmedPhone },
+          customer: { name: trimmedName, phone: trimmedPhone, consented: true },
         },
         idempotencyKeyRef.current,
       );
@@ -351,8 +351,11 @@ export default function BookingPage() {
               onChange={(e) => setConsent(e.target.checked)}
             />
             <span>
-              Aceito a politica de privacidade e o contato por WhatsApp sobre
-              esta reserva.
+              Aceito a{" "}
+              <a href="/privacidade" className="underline hover:text-green-800">
+                politica de privacidade
+              </a>{" "}
+              e o contato por WhatsApp sobre esta reserva.
             </span>
           </label>
           <button

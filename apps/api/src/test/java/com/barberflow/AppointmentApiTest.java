@@ -43,7 +43,7 @@ class AppointmentApiTest extends BaseIntegrationTest {
   private String body(String startLocal) {
     return "{\"slug\":\"" + SLUG + "\",\"barberId\":\"" + barberId
         + "\",\"serviceId\":\"" + serviceId + "\",\"startsAt\":\"" + slotIso(startLocal)
-        + "\",\"customer\":{\"name\":\"Cliente Teste\",\"phone\":\"" + PHONE + "\"}}";
+        + "\",\"customer\":{\"name\":\"Cliente Teste\",\"phone\":\"" + PHONE + "\",\"consented\":true}}";
   }
 
   private java.net.http.HttpResponse<String> book(String startLocal) throws Exception {

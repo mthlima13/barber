@@ -76,3 +76,11 @@ barberflow:
     # Ciclo de polling da outbox (worker) e backoff inicial de retry
     poll-interval-millis: ${WHATSAPP_POLL_INTERVAL_MILLIS:15000}
     first-backoff-seconds: ${WHATSAPP_FIRST_BACKOFF_SECONDS:30}
+  privacy:
+    # LGPD (spec, linha 223): versao da politica aceita no consentimento e
+    # retencao de clientes sem atividade (anonimizacao; desabilitada por
+    # padrao ate definicao com orientacao juridica)
+    policy-version: ${PRIVACY_POLICY_VERSION:1.0}
+    retention-enabled: ${PRIVACY_RETENTION_ENABLED:false}
+    retention-months: ${PRIVACY_RETENTION_MONTHS:24}
+    retention-cron: ${PRIVACY_RETENTION_CRON:0 0 3 * * *}

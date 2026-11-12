@@ -152,7 +152,7 @@ export function createAppointment(
     barberId: string;
     serviceId: string;
     startsAt: string;
-    customer: { name: string; phone: string };
+    customer: { name: string; phone: string; consented: boolean };
   },
   idempotencyKey: string,
 ) {

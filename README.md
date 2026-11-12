@@ -78,5 +78,6 @@ mvn verify   # Testcontainers; requer Docker em execucao
 - [x] Fase 2 — Agendamentos publicos (+ catalogo publico, rate limit, idempotencia, outbox/auditoria)
 - [x] Fase 3 — Lista de espera (hold transacional, ofertas com expiracao)
 - [x] Web — Publico de agendamento + link seguro de gerenciamento (Next.js)
-- [ ] Fase 4 — WhatsApp (Cloud API): worker da outbox e entrega real
+- [x] Fase 4 — WhatsApp (Cloud API): worker da outbox e webhook da Meta (entrega real depende de credenciais)
+- [x] LGPD — Consentimento na coleta, acesso/exclusao do titular via link seguro, politica de privacidade e retencao configuravel
 - [ ] Fase 5 — Producao piloto

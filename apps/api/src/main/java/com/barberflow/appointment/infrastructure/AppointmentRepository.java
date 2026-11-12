@@ -26,4 +26,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentJpaEntit
 
   List<AppointmentJpaEntity> findByTenantIdAndStatusInAndStartsAtBetweenOrderByStartsAtAsc(
       UUID tenantId, Collection<String> statuses, Instant dayStart, Instant dayEnd);
+
+  /** Canal de acesso LGPD: todas as reservas do titular (mais recentes). */
+  List<AppointmentJpaEntity> findByCustomerIdOrderByStartsAtDesc(UUID customerId);
 }

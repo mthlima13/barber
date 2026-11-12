@@ -39,7 +39,7 @@ class NotificationApiTest extends BaseIntegrationTest {
   private String bookBody(String localTime) {
     return "{\"slug\":\"" + SLUG + "\",\"barberId\":\"" + barberId
         + "\",\"serviceId\":\"" + serviceId + "\",\"startsAt\":\"" + slotIso(localTime)
-        + "\",\"customer\":{\"name\":\"Cliente Outbox\",\"phone\":\"" + PHONE + "\"}}";
+        + "\",\"customer\":{\"name\":\"Cliente Outbox\",\"phone\":\"" + PHONE + "\",\"consented\":true}}";
   }
 
   private java.net.http.HttpResponse<String> book(String localTime) throws Exception {
@@ -97,7 +97,7 @@ class NotificationApiTest extends BaseIntegrationTest {
     var joined = call("POST", "/api/v1/public/waitlist", "{\"slug\":\"" + SLUG
         + "\",\"barberId\":\"" + barberId + "\",\"serviceId\":\"" + serviceId
         + "\",\"startsAt\":\"" + slotIso("13:00")
-        + "\",\"customer\":{\"name\":\"Cliente Fila\",\"phone\":\"+5511980000001\"}}");
+        + "\",\"customer\":{\"name\":\"Cliente Fila\",\"phone\":\"+5511980000001\",\"consented\":true}}");
     assertThat(joined.statusCode()).isEqualTo(201);
     String entryId = extractId(joined.body());
 
