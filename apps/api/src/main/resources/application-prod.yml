@@ -1,0 +1,28 @@
+# BarberFlow — perfil de PRODUCAO (spec, secao 14).
+# Ativacao: SPRING_PROFILES_ACTIVE=prod + variaveis de ambiente obrigatorias
+# (ver docs/PRODUCAO.md). Nada aqui tem default de desenvolvimento: segredo
+# ausente impede a subida da API (fail-fast), nunca roda com segredo de dev.
+
+server:
+  # TLS termina no reverse proxy; X-Forwarded-* define o esquema/host real
+  # (HSTS e redirecionamentos funcionam corretamente atras do proxy).
+  forward-headers-strategy: framework
+
+spring:
+  flyway:
+    # Migrações controladas antes do rollout (spec, linha 278)
+    validate-on-migrate: true
+
+barberflow:
+  auth:
+    # SEM fallback: o segredo deve vir do secret manager (>= 32 bytes)
+    jwt-secret: ${AUTH_JWT_SECRET}
+    jwt-ttl-minutes: ${AUTH_JWT_TTL_MINUTES:720}
+  whatsapp:
+    # O operador decide explicitamente (credenciais da Meta obrigatorias
+    # quando true: phone-number-id, access-token, app-secret, verify-token)
+    enabled: ${WHATSAPP_ENABLED}
+  privacy:
+    # Retencao LGPD ativa em producao (anonimizacao automatica)
+    retention-enabled: ${PRIVACY_RETENTION_ENABLED:true}
+    retention-months: ${PRIVACY_RETENTION_MONTHS:24}

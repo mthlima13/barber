@@ -68,6 +68,24 @@ public class SecurityConfig {
         .csrf(csrf -> csrf.disable())
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .headers(
+            headers ->
+                headers
+                    // Spec, linha 216: CSP e headers de seguranca. A API
+                    // serve JSON (sem HTML proprio): nada embute a API.
+                    .contentSecurityPolicy(
+                        csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'"))
+                    .frameOptions(frame -> frame.deny())
+                    .referrerPolicy(
+                        referrer ->
+                            referrer.policy(
+                                org.springframework.security.web.header.writers
+                                    .ReferrerPolicyHeaderWriter.ReferrerPolicy
+                                    .STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                    .httpStrictTransportSecurity(
+                        hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31_536_000))
+                    // Nenhuma resposta da API deve ser cacheada por proxies
+                    .cacheControl(cache -> {}))
         .exceptionHandling(
             handling ->
                 handling.authenticationEntryPoint(

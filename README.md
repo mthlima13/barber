@@ -80,4 +80,5 @@ mvn verify   # Testcontainers; requer Docker em execucao
 - [x] Web — Publico de agendamento + link seguro de gerenciamento (Next.js)
 - [x] Fase 4 — WhatsApp (Cloud API): worker da outbox e webhook da Meta (entrega real depende de credenciais)
 - [x] LGPD — Consentimento na coleta, acesso/exclusao do titular via link seguro, politica de privacidade e retencao configuravel
-- [ ] Fase 5 — Producao piloto
+- [x] Fase 5 (preparacao) — Headers de seguranca (CSP/HSTS) na API e no web, perfil `prod` fail-fast, smoke test e checklist de producao (`docs/PRODUCAO.md`); deploy fica para quando houver infra
+- [ ] Fase 5 — Producao piloto (deploy real, backups, observabilidade em operacao, feedback da barbearia)
