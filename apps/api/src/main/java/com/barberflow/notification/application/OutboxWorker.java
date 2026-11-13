@@ -36,6 +36,7 @@ public class OutboxWorker {
   private final TenantRepository tenants;
   private final WhatsAppClient whatsApp;
   private final OutboxDeliveryService delivery;
+  private final com.barberflow.metrics.BusinessMetrics metrics;
   private final ObjectMapper mapper = new ObjectMapper();
   private final Object lock = new Object();
   private final long firstBackoffSeconds;
@@ -46,12 +47,14 @@ public class OutboxWorker {
       TenantRepository tenants,
       WhatsAppClient whatsApp,
       OutboxDeliveryService delivery,
+      com.barberflow.metrics.BusinessMetrics metrics,
       @Value("${barberflow.whatsapp.first-backoff-seconds:30}") long firstBackoffSeconds) {
     this.outbox = outbox;
     this.customers = customers;
     this.tenants = tenants;
     this.whatsApp = whatsApp;
     this.delivery = delivery;
+    this.metrics = metrics;
     this.firstBackoffSeconds = firstBackoffSeconds;
   }
 
@@ -78,6 +81,7 @@ public class OutboxWorker {
 
   private void deliver(OutboxEventJpaEntity event) {
     if (event.getAttemptCount() >= MAX_ATTEMPTS) {
+      metrics.deliveryFailed();
       delivery.markFailed(event.getId(), "Esgotadas " + MAX_ATTEMPTS + " tentativas");
       return;
     }
@@ -90,6 +94,7 @@ public class OutboxWorker {
       // Falha transitoria -> backoff exponencial; permanente/esgotado -> FAILED
       String cause = shorten(e.getMessage() == null ? e.toString() : e.getMessage());
       if (event.getAttemptCount() + 1 >= MAX_ATTEMPTS) {
+        metrics.deliveryFailed();
         delivery.markFailed(event.getId(), cause);
       } else {
         long backoffSeconds = Duration.ofSeconds(firstBackoffSeconds).multipliedBy(1L << event.getAttemptCount()).toSeconds();

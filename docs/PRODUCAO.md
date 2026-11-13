@@ -49,6 +49,12 @@ versões — deploy e migração controlados separadamente quando possível.
 
 - [ ] Prometheus exposto em `/actuator/prometheus` — coletar e dashboards mínimos:
       erro 5xx, latência p95, tamanho/idade da outbox, falhas do WhatsApp
+- [ ] Métricas de negócio (spec, linha 293) no mesmo scrape:
+      `barberflow_appointments_total{outcome="created|cancelled|conflict"}` (reservas),
+      `barberflow_waitlist_offers_total`, `barberflow_waitlist_offers_accepted_total`
+      e `barberflow_waitlist_offers_expired_total` (funil da fila de espera),
+      `barberflow_whatsapp_delivery_failed_total` (falhas de entrega),
+      `barberflow_outbox_pending` e `barberflow_outbox_oldest_pending_seconds` (saúde da outbox)
 - [ ] Alertas: API indisponível, banco sem conexão, fila atrasada, falha repetida
       de entrega (spec, linha 294)
 

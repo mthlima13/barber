@@ -63,6 +63,7 @@ public class AppointmentAppService {
   private final AuditService audits;
   private final JwtService jwt;
   private final com.barberflow.privacy.PrivacyProperties privacy;
+  private final com.barberflow.metrics.BusinessMetrics metrics;
 
   public AppointmentAppService(
       TenantRepository tenants,
@@ -76,7 +77,8 @@ public class AppointmentAppService {
       OutboxService outbox,
       AuditService audits,
       JwtService jwt,
-      com.barberflow.privacy.PrivacyProperties privacy) {
+      com.barberflow.privacy.PrivacyProperties privacy,
+      com.barberflow.metrics.BusinessMetrics metrics) {
     this.tenants = tenants;
     this.barbers = barbers;
     this.services = services;
@@ -89,6 +91,7 @@ public class AppointmentAppService {
     this.audits = audits;
     this.jwt = jwt;
     this.privacy = privacy;
+    this.metrics = metrics;
   }
 
   /** Criacao de reserva com Idempotency-Key opcional (spec, secao 9.1). */
@@ -131,7 +134,14 @@ public class AppointmentAppService {
 
     // Revalidacao no servidor (spec, secao 7.4): duracao sempre do servico.
     Instant endsAt = request.startsAt().plus(Duration.ofMinutes(service.getDurationMinutes()));
-    validateSlot(tenant, barber, service, request.startsAt(), endsAt, null);
+    try {
+      validateSlot(tenant, barber, service, request.startsAt(), endsAt, null);
+    } catch (AppointmentConflictException e) {
+      // Tentativa de reserva em horario ocupado: 409 com alternativas
+      // (o uso do validateFree pela fila de espera nao conta aqui)
+      metrics.appointmentConflict();
+      throw e;
+    }
 
     CustomerJpaEntity customer =
         getOrCreateCustomer(tenant.getId(), request.customer().name(), request.customer().phone());
@@ -154,6 +164,7 @@ public class AppointmentAppService {
                   idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey));
     } catch (org.springframework.dao.DataIntegrityViolationException e) {
       // Corrida perdida para a restricao de exclusao: 409 com alternativas.
+      metrics.appointmentConflict();
       ZoneId zone = ZoneId.of(tenant.getTimezone());
       throw new AppointmentConflictException(
           "Horario indisponivel para este profissional",
@@ -167,6 +178,7 @@ public class AppointmentAppService {
 
     // Evento de notificacao na MESMA transacao (spec, secao 9.1.5); chave de
     // idempotencia evita notificacao duplicada em replay.
+    metrics.appointmentCreated();
     outbox.append(
         tenant.getId(),
         OutboxEvents.APPOINTMENT_CREATED,

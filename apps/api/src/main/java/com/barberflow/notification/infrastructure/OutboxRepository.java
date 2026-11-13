@@ -36,4 +36,15 @@ public interface OutboxRepository extends JpaRepository<OutboxEventJpaEntity, UU
 
   /** Worker da Fase 4: eventos prontos, em ordem de entrega. */
   List<OutboxEventJpaEntity> findByStatusOrderByNextAttemptAtAsc(String status);
+
+  /** Metrica: quantidade de eventos por status (scrape do Prometheus). */
+  long countByStatus(String status);
+
+  /** Metrica: created_at do evento PENDING mais antigo (idade da fila). */
+  @Query(
+      """
+      select min(e.createdAt) from OutboxEventJpaEntity e
+      where e.status = 'PENDING'
+      """)
+  Instant oldestPendingCreatedAt();
 }

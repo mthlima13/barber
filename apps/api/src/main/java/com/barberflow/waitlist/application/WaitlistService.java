@@ -60,6 +60,7 @@ public class WaitlistService {
   private final OutboxService outbox;
   private final JwtService jwt;
   private final com.barberflow.privacy.PrivacyProperties privacy;
+  private final com.barberflow.metrics.BusinessMetrics metrics;
   private final long offerTtlMinutes;
 
   public WaitlistService(
@@ -75,6 +76,7 @@ public class WaitlistService {
       OutboxService outbox,
       JwtService jwt,
       com.barberflow.privacy.PrivacyProperties privacy,
+      com.barberflow.metrics.BusinessMetrics metrics,
       @Value("${barberflow.waitlist.offer-ttl-minutes:5}") long offerTtlMinutes) {
     this.tenants = tenants;
     this.barbers = barbers;
@@ -88,6 +90,7 @@ public class WaitlistService {
     this.outbox = outbox;
     this.jwt = jwt;
     this.privacy = privacy;
+    this.metrics = metrics;
     this.offerTtlMinutes = offerTtlMinutes;
   }
 
@@ -166,6 +169,7 @@ public class WaitlistService {
     for (SlotOfferJpaEntity offer : offers.findByTenantIdAndStatus(tenantId, "PENDING")) {
       if (offer.expirada(now)) {
         offer.expirar();
+        metrics.waitlistExpired();
         entries
             .findById(offer.getWaitlistEntryId())
             .filter(entry -> "OFFERED".equals(entry.getStatus()))
@@ -203,6 +207,7 @@ public class WaitlistService {
                   sha256(jwt.offerToken(offerId)),
                   expiresAt));
       entry.oferecer(expiresAt);
+      metrics.waitlistOffered();
       // Evento de entrega na MESMA transacao da oferta (spec, secao 9.2.4);
       // worker de WhatsApp entra na Fase 4. Token nunca vai para o payload.
       outbox.append(
@@ -310,6 +315,7 @@ public class WaitlistService {
                 null));
     offer.aceitar();
     entry.cumprir();
+    metrics.waitlistAccepted();
     // Reserva criada via lista de espera: evento na mesma transacao (9.1.5).
     outbox.append(
         tenant.getId(),
