@@ -238,6 +238,7 @@ public class AppointmentAppService {
   @Transactional
   public AppointmentResponse cancelForCustomer(AuthPrincipal principal, UUID appointmentId) {
     AppointmentJpaEntity entity = loadForCustomer(principal, appointmentId);
+    TenantJpaEntity tenant = requireTenant(entity.getTenantId());
     String previousStatus = entity.getStatus();
     transition(entity, "CANCELLED");
     // Evento de notificacao na MESMA transacao (spec, secao 9.2.2).
@@ -251,6 +252,16 @@ public class AppointmentAppService {
             "previousStatus", previousStatus,
             "startsAt", entity.getStartsAt(),
             "status", "CANCELLED"));
+    notifyManager(
+        tenant,
+        OutboxEvents.MANAGER_APPOINTMENT_CANCELLED,
+        "manager-appointment-cancelled:" + entity.getId(),
+        java.util.Map.of(
+            "audience", "manager",
+            "appointmentId", entity.getId(),
+            "customerId", entity.getCustomerId(),
+            "previousStatus", previousStatus,
+            "startsAt", entity.getStartsAt()));
     // Horario liberado fica elegivel para a lista de espera (spec, secao 9.2.3);
     // ofertas registradas na mesma transacao.
     waitlist.process(entity.getTenantId());
@@ -286,6 +297,19 @@ public class AppointmentAppService {
             "startsAt", newStartsAt,
             "endsAt", newEndsAt,
             "status", entity.getStatus()));
+    // Remarcacao pode acontecer varias vezes para a mesma reserva: a chave
+    // inclui o NOVO horario — replay do mesmo request nao duplica a
+    // mensagem, mas uma segunda mudanca de horario notifica de novo.
+    notifyManager(
+        tenant,
+        OutboxEvents.MANAGER_APPOINTMENT_RESCHEDULED,
+        "manager-appointment-rescheduled:" + entity.getId() + ":" + newStartsAt,
+        java.util.Map.of(
+            "audience", "manager",
+            "appointmentId", entity.getId(),
+            "customerId", entity.getCustomerId(),
+            "previousStartsAt", previousStartsAt,
+            "startsAt", newStartsAt));
     return toResponse(entity, null);
   }
 

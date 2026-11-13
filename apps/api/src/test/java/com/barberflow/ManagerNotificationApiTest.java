@@ -93,6 +93,60 @@ class ManagerNotificationApiTest extends BaseIntegrationTest {
     assertSent("manager-waitlist-joined:" + extractId(joined.body()));
   }
 
+  @Test
+  void managerNotifiedOnCustomerCancelAndReschedule() throws Exception {
+    callAuth(
+        "PATCH", "/api/v1/dashboard/settings",
+        "{\"managerPhone\":\"" + MANAGER_PHONE + "\"}");
+
+    // Cancelamento pelo link seguro: evento de gestor com o slot antigo
+    var booked = book("10:00");
+    String cancelId = extractId(booked.body());
+    String cancelToken = extractJson(booked.body(), "manageToken");
+    var cancelled =
+        callWith(cancelToken, "POST",
+            "/api/v1/customer/appointments/" + cancelId + "/cancel", null);
+    assertThat(cancelled.statusCode()).isEqualTo(200);
+    var cancelEvent =
+        outbox.findByIdempotencyKey("manager-appointment-cancelled:" + cancelId)
+            .orElseThrow();
+    assertThat(cancelEvent.getEventType())
+        .isEqualTo(OutboxEvents.MANAGER_APPOINTMENT_CANCELLED);
+    assertThat(cancelEvent.getPayloadJson()).contains("\"audience\":\"manager\"");
+
+    // Remarcacao pelo link seguro: evento com horario anterior e novo
+    var booked2 = book("11:00");
+    String rescheduleId = extractId(booked2.body());
+    String rescheduleToken = extractJson(booked2.body(), "manageToken");
+    String newStartsAt = date + "T15:00:00-03:00";
+    var rescheduled =
+        callWith(rescheduleToken, "POST",
+            "/api/v1/customer/appointments/" + rescheduleId + "/reschedule",
+            "{\"startsAt\":\"" + newStartsAt + "\"}");
+    assertThat(rescheduled.statusCode()).isEqualTo(200);
+    // A chave do evento usa o Instant normalizado (UTC) do servico
+    String rescheduleKey =
+        "manager-appointment-rescheduled:" + rescheduleId + ":"
+            + java.time.Instant.parse(newStartsAt);
+    var rescheduleEvent = outbox.findByIdempotencyKey(rescheduleKey).orElseThrow();
+    assertThat(rescheduleEvent.getEventType())
+        .isEqualTo(OutboxEvents.MANAGER_APPOINTMENT_RESCHEDULED);
+
+    // Segunda remarcacao: NOVA mensagem (chave inclui o novo horario)
+    String secondStartsAt = date + "T16:00:00-03:00";
+    var again =
+        callWith(rescheduleToken, "POST",
+            "/api/v1/customer/appointments/" + rescheduleId + "/reschedule",
+            "{\"startsAt\":\"" + secondStartsAt + "\"}");
+    assertThat(again.statusCode()).isEqualTo(200);
+    assertThat(outbox.countByEventType(OutboxEvents.MANAGER_APPOINTMENT_RESCHEDULED))
+        .isEqualTo(2);
+
+    // Entrega end-to-end dos dois primeiros eventos
+    assertSent("manager-appointment-cancelled:" + cancelId);
+    assertSent(rescheduleKey);
+  }
+
   // ------------------------------------------------------------------ helpers
 
   /** Repete runOnce() ate o evento sair; lote de 20 pode consumir ciclos. */
@@ -155,6 +209,13 @@ class ManagerNotificationApiTest extends BaseIntegrationTest {
   /** 0=domingo ... 6=sabado (DOW do PostgreSQL). */
   private static int weekdayOf(LocalDate date) {
     return date.getDayOfWeek().getValue() % 7;
+  }
+
+  /** Valor string de um campo JSON de nivel superior (corpos simples de teste). */
+  private static String extractJson(String json, String field) {
+    String key = "\"" + field + "\":\"";
+    int start = json.indexOf(key) + key.length();
+    return json.substring(start, json.indexOf('"', start));
   }
 
   /** POST com header extra (Idempotency-Key obrigatoria na criacao de reserva). */

@@ -33,5 +33,10 @@ public final class OutboxEvents {
 
   public static final String MANAGER_WAITLIST_JOINED = "MANAGER_WAITLIST_JOINED";
 
+  /** Cancelamento e remarcacao feitos pelo CLIENTE (link seguro). */
+  public static final String MANAGER_APPOINTMENT_CANCELLED = "MANAGER_APPOINTMENT_CANCELLED";
+
+  public static final String MANAGER_APPOINTMENT_RESCHEDULED = "MANAGER_APPOINTMENT_RESCHEDULED";
+
   private OutboxEvents() {}
 }

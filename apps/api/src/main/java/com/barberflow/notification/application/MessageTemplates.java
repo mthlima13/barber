@@ -65,6 +65,18 @@ public final class MessageTemplates {
               + " entrou na lista de espera para "
               + when(payload, "startsAt", zone)
               + ".";
+      case OutboxEvents.MANAGER_APPOINTMENT_CANCELLED ->
+          customerName
+              + " cancelou a reserva de "
+              + when(payload, "startsAt", zone)
+              + ". O horario esta livre de novo.";
+      case OutboxEvents.MANAGER_APPOINTMENT_RESCHEDULED ->
+          customerName
+              + " remarcou a reserva: antes "
+              + when(payload, "previousStartsAt", zone)
+              + ", agora sera "
+              + when(payload, "startsAt", zone)
+              + ".";
       default -> null;
     };
   }
