@@ -48,6 +48,12 @@ public final class MessageTemplates {
               + when(payload, "startsAt", zone)
               + ". Abra o link seguro da sua inscricao na lista de espera para confirmar"
               + " em ate 5 minutos.";
+      case OutboxEvents.APPOINTMENT_REMINDER ->
+          "Ola, "
+              + customerName
+              + "! Lembrete: sua reserva esta marcada para "
+              + when(payload, "startsAt", zone)
+              + ". Se precisar remarcar ou cancelar, use o link seguro que voce recebeu.";
       default -> null;
     };
   }

@@ -19,5 +19,11 @@ public final class OutboxEvents {
   /** Vaga liberada ofertada a inscrito da lista de espera (spec, secao 9.2.4). */
   public static final String WAITLIST_SLOT_AVAILABLE = "WAITLIST_SLOT_AVAILABLE";
 
+  /**
+   * Lembrete 24h (Fase 4): agendado pelo ReminderWorker com chave de
+   * idempotencia por reserva — reexecucoes do job nunca duplicam a mensagem.
+   */
+  public static final String APPOINTMENT_REMINDER = "APPOINTMENT_REMINDER";
+
   private OutboxEvents() {}
 }

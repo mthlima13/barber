@@ -22,6 +22,10 @@ barberflow:
     # O operador decide explicitamente (credenciais da Meta obrigatorias
     # quando true: phone-number-id, access-token, app-secret, verify-token)
     enabled: ${WHATSAPP_ENABLED}
+  reminders:
+    # Lembrete 24h ativo em producao (janela de 24h, varredura a cada 15 min)
+    enabled: ${REMINDERS_ENABLED:true}
+    window-hours: ${REMINDERS_WINDOW_HOURS:24}
   privacy:
     # Retencao LGPD ativa em producao (anonimizacao automatica)
     retention-enabled: ${PRIVACY_RETENTION_ENABLED:true}

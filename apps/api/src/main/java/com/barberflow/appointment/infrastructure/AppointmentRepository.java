@@ -29,4 +29,8 @@ public interface AppointmentRepository extends JpaRepository<AppointmentJpaEntit
 
   /** Canal de acesso LGPD: todas as reservas do titular (mais recentes). */
   List<AppointmentJpaEntity> findByCustomerIdOrderByStartsAtDesc(UUID customerId);
+
+  /** Lembrete 24h (Fase 4): reservas na janela de antecedencia, todos os tenants. */
+  List<AppointmentJpaEntity> findByStatusInAndStartsAtBetween(
+      Collection<String> statuses, Instant windowStart, Instant windowEnd);
 }

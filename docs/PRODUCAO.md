@@ -27,6 +27,7 @@ O perfil `prod` (`application-prod.yml`) **falha a subida** se algo essencial fa
 | `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` | obrigatórias quando `WHATSAPP_ENABLED=true`; número real da Meta |
 | `BARBERSHOP_DEFAULT_TENANT_SLUG`, `BARBERSHOP_DEFAULT_TENANT_NAME` | identidade da barbearia piloto |
 | `PRIVACY_RETENTION_ENABLED` | padrão `true` no prod (retenção LGPD) |
+| `REMINDERS_ENABLED` | padrão `true` no prod (lembrete 24h via outbox; `REMINDERS_WINDOW_HOURS` ajusta a janela) |
 | `NEXT_PUBLIC_API_BASE_URL` (web) | URL pública da API |
 | `NEXT_PUBLIC_DEFAULT_SLUG` (web) | slug da barbearia piloto |
 

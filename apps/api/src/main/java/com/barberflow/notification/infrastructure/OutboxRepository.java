@@ -47,4 +47,7 @@ public interface OutboxRepository extends JpaRepository<OutboxEventJpaEntity, UU
       where e.status = 'PENDING'
       """)
   Instant oldestPendingCreatedAt();
+
+  /** Lembrete 24h: controle de idempotencia do job nos testes. */
+  long countByEventType(String eventType);
 }

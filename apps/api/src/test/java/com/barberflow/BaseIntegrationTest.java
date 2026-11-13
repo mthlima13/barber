@@ -50,6 +50,10 @@ public abstract class BaseIntegrationTest {
     registry.add("barberflow.whatsapp.app-secret", () -> "test-app-secret");
     registry.add("barberflow.whatsapp.poll-interval-millis", () -> "3600000");
     registry.add("barberflow.whatsapp.first-backoff-seconds", () -> "0");
+    // Lembrete 24h: desligado no @Scheduled (job manual no teste) e janela
+    // larga para a reserva de +3 dias entrar na varredura
+    registry.add("barberflow.reminders.enabled", () -> "false");
+    registry.add("barberflow.reminders.window-hours", () -> "720");
   }
 
   private static final HttpClient HTTP = HttpClient.newHttpClient();
