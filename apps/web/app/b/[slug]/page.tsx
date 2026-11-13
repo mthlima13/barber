@@ -9,6 +9,7 @@ import {
   getBarbers,
   getBarbershop,
   getServices,
+  joinWaitlist,
   ApiError,
   type PublicBarber,
   type PublicBarbershop,
@@ -48,6 +49,12 @@ export default function BookingPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // "Avise-me" (lista de espera publica, spec secao 10): aparece quando a
+  // data escolhida nao tem horarios livres.
+  const [waitlistTime, setWaitlistTime] = useState("");
+  const [waitlistBusy, setWaitlistBusy] = useState(false);
+  const [waitlistDone, setWaitlistDone] = useState(false);
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
   const [booked, setBooked] = useState<{
     id: string;
     manageToken: string;
@@ -89,9 +96,13 @@ export default function BookingPage() {
     };
   }, [slug]);
 
-  // Muda servico/profissional: slot escolhido deixa de ser valido.
+  // Muda servico/profissional: slot escolhido deixa de ser valido e o
+  // avise-me comeca de novo (a inscricao e por data/horario especifico).
   useEffect(() => {
     setSlotStart(null);
+    setWaitlistTime("");
+    setWaitlistDone(false);
+    setWaitlistError(null);
   }, [serviceId, barberId, date]);
 
   const loadAvailability = useCallback(async () => {
@@ -116,6 +127,51 @@ export default function BookingPage() {
       void loadAvailability();
     }
   }, [serviceId, barberId, date, loadAvailability]);
+
+  /** Inscricao na lista de espera para o horario desejado (spec, secao 10). */
+  async function submitWaitlist(event: React.FormEvent) {
+    event.preventDefault();
+    if (!serviceId || !barberId || !date) return;
+
+    const trimmedName = name.trim();
+    if (trimmedName.length < 3) {
+      setWaitlistError("Informe seu nome completo");
+      return;
+    }
+    const e164 = toE164(phone);
+    if (!e164) {
+      setWaitlistError("Telefone invalido (use DDD, ex.: 11 97000-0000)");
+      return;
+    }
+    if (!consent) {
+      setWaitlistError("E necessario aceitar a politica de privacidade");
+      return;
+    }
+    const zone = barbershop?.timezone ?? "America/Sao_Paulo";
+    const startsAt = zoneIso(date, waitlistTime, zone);
+    if (!startsAt) {
+      setWaitlistError("Escolha o horario desejado");
+      return;
+    }
+
+    setWaitlistBusy(true);
+    setWaitlistError(null);
+    try {
+      await joinWaitlist(slug, barberId, serviceId, startsAt, {
+        name: trimmedName,
+        phone: e164,
+        consented: true,
+      });
+      setWaitlistDone(true);
+    } catch (e) {
+      // 409 = ja inscrito para este horario (cliente re-tentando)
+      setWaitlistError(
+        e instanceof ApiError ? e.message : "Erro ao entrar na lista de espera",
+      );
+    } finally {
+      setWaitlistBusy(false);
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -328,9 +384,78 @@ export default function BookingPage() {
           <p className="mt-3 text-sm text-slate-500">Buscando horarios...</p>
         )}
         {slots && slots.length === 0 && !availabilityLoading && (
-          <p className="mt-3 text-sm text-slate-500">
-            Sem horarios livres nesta data. Tente outro dia.
-          </p>
+          <div className="mt-3 rounded-lg bg-amber-50 p-3">
+            <p className="text-sm font-medium text-amber-800">
+              Sem horarios livres nesta data.
+            </p>
+            {waitlistDone ? (
+              <p className="mt-2 text-sm text-green-800">
+                Pronto! Vamos te avisar pelo WhatsApp se uma vaga abrir
+                {waitlistTime ? ` as ${waitlistTime}` : ""}.
+              </p>
+            ) : (
+              <form className="mt-2 grid gap-2" onSubmit={submitWaitlist}>
+                <p className="text-xs text-amber-800">
+                  Quer que a gente avise se abrir uma vaga? Escolha o horario
+                  desejado — se ele ficar livre, voce recebe o convite em
+                  primeiro.
+                </p>
+                <input
+                  type="time"
+                  className="rounded-lg border border-amber-300 p-2 text-sm"
+                  value={waitlistTime}
+                  onChange={(e) => setWaitlistTime(e.target.value)}
+                  required
+                />
+                <label className="text-xs">
+                  <span className="font-medium">Nome</span>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-amber-300 p-2 text-sm"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nome e sobrenome"
+                  />
+                </label>
+                <label className="text-xs">
+                  <span className="font-medium">Telefone (WhatsApp)</span>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-amber-300 p-2 text-sm"
+                    value={phone}
+                    onChange={(e) => setPhone(maskPhone(e.target.value))}
+                    placeholder="(11) 97000-0000"
+                    inputMode="tel"
+                  />
+                </label>
+                <label className="flex items-start gap-2 text-xs text-amber-900">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                  />
+                  <span>
+                    Aceito a{" "}
+                    <a href="/privacidade" className="underline hover:text-amber-800">
+                      politica de privacidade
+                    </a>{" "}
+                    e o contato por WhatsApp caso abra uma vaga.
+                  </span>
+                </label>
+                {waitlistError && (
+                  <p className="text-xs text-red-700" role="alert">
+                    {waitlistError}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
+                  disabled={waitlistBusy}
+                >
+                  {waitlistBusy ? "Registrando..." : "Avise-me se abrir vaga"}
+                </button>
+              </form>
+            )}
+          </div>
         )}
         <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
           {(slots ?? []).map((slot) => (
@@ -427,9 +552,48 @@ export default function BookingPage() {
   );
 }
 
+/**
+ * ISO com o offset do timezone da barbearia na data informada
+ * (ex.: "2026-11-15T10:00:00-03:00"), necessario porque a API espera
+ * Instant (a API publica de disponibilidade tambem recebe esse formato).
+ */
+function zoneIso(date: string, time: string, timeZone: string): string | null {
+  if (!time || !date) return null;
+  // Interpreta a parelha como UTC e descobre como o timezone a renderiza:
+  // a diferenca e o offset local (funciona com DST, quando houver).
+  const naive = new Date(`${date}T${time}:00Z`);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(naive);
+  const map: Record<string, string> = {};
+  for (const part of parts) {
+    map[part.type] = part.value;
+  }
+  const asUtc = Date.UTC(
+    Number(map.year),
+    Number(map.month) - 1,
+    Number(map.day),
+    Number(map.hour) % 24,
+    Number(map.minute),
+    Number(map.second),
+  );
+  const offsetMinutes = Math.round((asUtc - naive.getTime()) / 60000);
+  const sign = offsetMinutes < 0 ? "-" : "+";
+  const abs = Math.abs(offsetMinutes);
+  const hh = String(Math.floor(abs / 60)).padStart(2, "0");
+  const mm = String(abs % 60).padStart(2, "0");
+  return `${date}T${time}:00${sign}${hh}:${mm}`;
+}
+
 /** Mascara BR enquanto digita: (11) 97000-0000. */
-function maskPhone(value: string): string {
-  const digits = value.replace(/\D/g, "");
+function maskPhone(value: string): string {  const digits = value.replace(/\D/g, "");
   const d = digits.slice(0, 11);
   if (d.length <= 2) return d;
   if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;

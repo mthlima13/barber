@@ -32,6 +32,25 @@ export type PublicBarber = {
 
 export type Slot = { startAt: string; endAt: string };
 
+/** Inscricao na lista de espera publica (spec, secao 10). */
+export type PublicWaitlistEntry = {
+  id: string;
+  status: string;
+  manageToken: string | null;
+};
+
+/** Alerta por horario especifico quando a data esta cheia (spec, secao 10). */
+export function joinWaitlist(
+  slug: string,
+  barberId: string,
+  serviceId: string,
+  startsAt: string,
+  customer: { name: string; phone: string; consented: boolean },
+) {
+  return request<PublicWaitlistEntry>("POST", "/api/v1/public/waitlist", {
+    json: { slug, barberId, serviceId, startsAt, customer },
+  });
+}
 export type Availability = {
   date: string;
   timezone: string;
