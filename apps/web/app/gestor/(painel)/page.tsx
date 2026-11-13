@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getAgenda,
+  getSummary,
   listBarbers,
   listServices,
   updateAppointmentStatus,
   ApiError,
   type Appointment,
   type BarberAdmin,
+  type DashboardSummary,
   type ServiceAdmin,
 } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -57,6 +59,7 @@ export default function AgendaPage() {
   const [items, setItems] = useState<Appointment[] | null>(null);
   const [services, setServices] = useState<ServiceAdmin[]>([]);
   const [barbers, setBarbers] = useState<BarberAdmin[]>([]);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -66,14 +69,16 @@ export default function AgendaPage() {
     if (!token) return;
     setError(null);
     try {
-      const [agenda, serviceList, barberList] = await Promise.all([
+      const [agenda, serviceList, barberList, daySummary] = await Promise.all([
         getAgenda(date, token, barberId || undefined),
         listServices(token),
         listBarbers(token),
+        getSummary(date, token).catch(() => null),
       ]);
       setItems(agenda);
       setServices(serviceList);
       setBarbers(barberList);
+      setSummary(daySummary);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         window.location.href = "/gestor/login";
@@ -149,6 +154,41 @@ export default function AgendaPage() {
         </p>
       )}
 
+      {summary && (
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <SummaryCard
+            label="Reservas do dia"
+            value={String(summary.appointments.total)}
+            hint={`${summary.appointments.confirmed} confirmadas, ${summary.appointments.pending} pendentes`}
+          />
+          <SummaryCard
+            label="Previsao do dia"
+            value={price(summary.appointments.expectedRevenueCents)}
+            hint="pendentes + confirmadas + concluidas"
+          />
+          <SummaryCard
+            label="Fila de espera"
+            value={String(summary.waitlist.waiting + summary.waitlist.offered)}
+            hint={`${summary.waitlist.waiting} aguardando, ${summary.waitlist.offered} com oferta`}
+          />
+          <SummaryCard
+            label="Outbox"
+            value={String(summary.outbox.pending)}
+            hint={
+              summary.outbox.failed > 0
+                ? `${summary.outbox.failed} com falha — verificar`
+                : "sem falhas"
+            }
+            alert={summary.outbox.failed > 0}
+          />
+          <SummaryCard
+            label="Concluidas"
+            value={String(summary.appointments.completed)}
+            hint={`${summary.appointments.noShow} nao compareceu`}
+          />
+        </div>
+      )}
+
       {items === null ? (
         <p className="mt-6 text-sm text-slate-500">Carregando...</p>
       ) : items.length === 0 ? (
@@ -203,6 +243,33 @@ export default function AgendaPage() {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** Cartao do resumo do dia (GET /api/v1/dashboard/summary). */
+function SummaryCard({
+  label,
+  value,
+  hint,
+  alert = false,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  alert?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-lg p-3 shadow-sm ${
+        alert ? "bg-red-50" : "bg-white"
+      } border ${alert ? "border-red-200" : "border-slate-200"}`}
+    >
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-bold text-slate-800">{value}</p>
+      <p className={`text-xs ${alert ? "text-red-700" : "text-slate-500"}`}>
+        {hint}
+      </p>
     </div>
   );
 }

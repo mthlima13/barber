@@ -23,6 +23,9 @@ public interface WaitlistEntryRepository extends JpaRepository<WaitlistEntryJpaE
   /** Listagem do dashboard (mais recentes primeiro). */
   List<WaitlistEntryJpaEntity> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
 
+  /** Resumo do dashboard: tamanho da fila por status. */
+  long countByTenantIdAndStatus(UUID tenantId, String status);
+
   /** Canal de acesso LGPD: todas as inscricoes do titular. */
   List<WaitlistEntryJpaEntity> findByCustomerIdOrderByCreatedAtDesc(UUID customerId);
 }

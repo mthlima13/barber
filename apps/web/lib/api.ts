@@ -465,6 +465,33 @@ export function processWaitlist(authToken: string) {
   });
 }
 
+// -------------------------------------------------- dashboard: resumo
+
+/** Cartoes resumo do painel (visao do dia em uma chamada). */
+export type DashboardSummary = {
+  date: string;
+  appointments: {
+    total: number;
+    pending: number;
+    confirmed: number;
+    completed: number;
+    noShow: number;
+    cancelled: number;
+    expectedRevenueCents: number;
+  };
+  waitlist: { waiting: number; offered: number; fulfilled: number; expired: number };
+  outbox: { pending: number; failed: number };
+};
+
+/** Agregado do dia (sem data: hoje no fuso da barbearia). */
+export function getSummary(date: string, authToken: string) {
+  return request<DashboardSummary>(
+    "GET",
+    `/api/v1/dashboard/summary?date=${date}`,
+    { token: authToken },
+  );
+}
+
 // --------------------------------------------- dashboard: configuracoes
 
 /** Configuracoes da barbearia: WhatsApp do gestor para notificacoes. */

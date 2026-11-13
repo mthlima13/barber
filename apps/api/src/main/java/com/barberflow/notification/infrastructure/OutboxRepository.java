@@ -50,4 +50,7 @@ public interface OutboxRepository extends JpaRepository<OutboxEventJpaEntity, UU
 
   /** Lembrete 24h: controle de idempotencia do job nos testes. */
   long countByEventType(String eventType);
+
+  /** Resumo do dashboard: fila de entrega do tenant por status. */
+  long countByTenantIdAndStatus(UUID tenantId, String status);
 }
