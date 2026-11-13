@@ -1,13 +1,17 @@
 package com.barberflow.staff.api;
 
+import com.barberflow.auth.domain.AuthPrincipal;
 import com.barberflow.service.api.ServiceResponse;
 import com.barberflow.staff.application.BarberAppService;
+import com.barberflow.staff.application.BarberCredentialsService;
+import com.barberflow.tenant.application.TenantService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -29,9 +33,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class BarberController {
 
   private final BarberAppService barbers;
+  private final BarberCredentialsService credentials;
+  private final TenantService tenants;
 
-  public BarberController(BarberAppService barbers) {
+  public BarberController(
+      BarberAppService barbers, BarberCredentialsService credentials, TenantService tenants) {
     this.barbers = barbers;
+    this.credentials = credentials;
+    this.tenants = tenants;
   }
 
   @PostMapping
@@ -71,5 +80,22 @@ public class BarberController {
   public List<ServiceResponse> enableServices(
       @PathVariable UUID id, @Valid @RequestBody EnableServicesRequest request) {
     return barbers.enableServices(id, request.serviceIds());
+  }
+
+  /**
+   * Cria a conta de acesso do profissional (papel BARBER, spec linha 218):
+   * o profissional faz login e ve APENAS a propria agenda (linha 361).
+   */
+  @PostMapping("/{id}/credentials")
+  public ResponseEntity<BarberResponse.Credentials> createCredentials(
+      @AuthenticationPrincipal AuthPrincipal principal,
+      @PathVariable UUID id,
+      @Valid @RequestBody BarberCredentialsRequest request) {
+    BarberResponse.Credentials created =
+        credentials.createCredentials(
+            tenants.requireCurrentTenantId(), id, request.email(), request.password());
+    return ResponseEntity.created(
+            URI.create("/api/v1/dashboard/barbers/" + id + "/credentials"))
+        .body(created);
   }
 }

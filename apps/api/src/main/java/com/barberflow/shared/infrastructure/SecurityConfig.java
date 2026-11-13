@@ -59,6 +59,10 @@ public class SecurityConfig {
                     // X-Hub-Signature-256 no proprio controller (spec, linha 221)
                     .requestMatchers("/api/v1/webhooks/whatsapp")
                     .permitAll()
+                    // Agenda do PROPRIO profissional (papel BARBER, spec
+                    // linha 218/361): antes do matcher geral do dashboard
+                    .requestMatchers("/api/v1/dashboard/barber/**")
+                    .hasAnyRole("BARBER", "MANAGER")
                     // Painel do gestor (agenda do barbeiro entra depois: BARBER)
                     .requestMatchers("/api/v1/dashboard/**")
                     .hasRole("MANAGER")

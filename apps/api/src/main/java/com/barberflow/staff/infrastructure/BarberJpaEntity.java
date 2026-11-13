@@ -63,6 +63,11 @@ public class BarberJpaEntity {
     this.active = active;
   }
 
+  /** Vincula a conta de acesso do profissional (papel BARBER). */
+  public void vincularUsuario(UUID userId) {
+    this.userId = userId;
+  }
+
   public UUID getId() {
     return id;
   }

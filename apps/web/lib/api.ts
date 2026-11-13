@@ -249,6 +249,43 @@ export function updateAppointmentStatus(
   );
 }
 
+// ------------------------------------------------- dashboard: agenda BARBER
+
+/** Agenda do PROPRIO profissional (papel BARBER — spec, linha 361). */
+export function getBarberAgenda(date: string, authToken: string) {
+  return request<Appointment[]>(
+    "GET",
+    `/api/v1/dashboard/barber/agenda?date=${date}`,
+    { token: authToken },
+  );
+}
+
+export function updateBarberAppointmentStatus(
+  appointmentId: string,
+  status: string,
+  authToken: string,
+) {
+  return request<Appointment>(
+    "PATCH",
+    `/api/v1/dashboard/barber/appointments/${appointmentId}/status`,
+    { json: { status }, token: authToken },
+  );
+}
+
+/** Cria a conta de acesso do profissional (papel BARBER). */
+export function createBarberCredentials(
+  barberId: string,
+  email: string,
+  password: string,
+  authToken: string,
+) {
+  return request<{ barberId: string; email: string; role: string }>(
+    "POST",
+    `/api/v1/dashboard/barbers/${barberId}/credentials`,
+    { json: { email, password }, token: authToken },
+  );
+}
+
 // --------------------------------------------------- dashboard: servicos
 
 export type ServiceAdmin = {

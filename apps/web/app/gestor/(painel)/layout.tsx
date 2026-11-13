@@ -31,12 +31,15 @@ export default function PainelLayout({
     return <main className="p-6 text-sm text-slate-500">Carregando...</main>;
   }
 
-  const navItems = [
-    { href: "/gestor", label: "Agenda" },
-    { href: "/gestor/servicos", label: "Servicos" },
-    { href: "/gestor/profissionais", label: "Profissionais" },
-    { href: "/gestor/fila", label: "Fila de espera" },
-  ];
+  const isBarber = user?.role === "BARBER";
+  const navItems = isBarber
+    ? [{ href: "/gestor/minha-agenda", label: "Minha agenda" }]
+    : [
+        { href: "/gestor", label: "Agenda" },
+        { href: "/gestor/servicos", label: "Servicos" },
+        { href: "/gestor/profissionais", label: "Profissionais" },
+        { href: "/gestor/fila", label: "Fila de espera" },
+      ];
 
   return (
     <div className="min-h-screen">

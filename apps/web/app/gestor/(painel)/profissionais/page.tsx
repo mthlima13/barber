@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   createBarber,
+  createBarberCredentials,
   deleteBarber,
   getBarberHours,
   listBarbers,
@@ -29,6 +30,7 @@ export default function ProfissionaisPage() {
   const [items, setItems] = useState<BarberAdmin[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hoursFor, setHoursFor] = useState<string | null>(null);
+  const [credentialsFor, setCredentialsFor] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -197,6 +199,29 @@ export default function ProfissionaisPage() {
                   >
                     {barber.active ? "Desativar" : "Ativar"}
                   </button>
+                  {barber.userId === null && (
+                    <button
+                      type="button"
+                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-40 ${
+                        credentialsFor === barber.id
+                          ? "bg-slate-200 text-slate-800"
+                          : "border border-slate-300 hover:bg-slate-50"
+                      }`}
+                      disabled={busy}
+                      onClick={() =>
+                        setCredentialsFor(
+                          credentialsFor === barber.id ? null : barber.id,
+                        )
+                      }
+                    >
+                      Criar acesso
+                    </button>
+                  )}
+                  {barber.userId !== null && (
+                    <span className="rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                      acesso criado
+                    </span>
+                  )}
                   <button
                     type="button"
                     className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-40"
@@ -213,6 +238,16 @@ export default function ProfissionaisPage() {
                   onDone={(message) => {
                     setHoursFor(null);
                     setError(message);
+                  }}
+                />
+              )}
+              {credentialsFor === barber.id && (
+                <CredentialsEditor
+                  barberId={barber.id}
+                  onDone={(message) => {
+                    setCredentialsFor(null);
+                    if (message) setError(message);
+                    void load();
                   }}
                 />
               )}
@@ -336,6 +371,71 @@ function HoursEditor({
         disabled={busy}
       >
         Salvar expediente
+      </button>
+    </form>
+  );
+}
+
+/** Conta de acesso do profissional (papel BARBER — spec, linha 361). */
+function CredentialsEditor({
+  barberId,
+  onDone,
+}: {
+  barberId: string;
+  onDone: (message: string | null) => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const token = getToken();
+
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+    setBusy(true);
+    try {
+      const created = await createBarberCredentials(
+        barberId,
+        email.trim(),
+        password,
+        token,
+      );
+      onDone(`Acesso criado para ${created.email} (papel ${created.role})`);
+    } catch (e) {
+      onDone(e instanceof ApiError ? e.message : "Erro ao criar acesso");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      className="mt-3 flex flex-wrap gap-2 rounded-lg bg-slate-50 p-3"
+      onSubmit={onSubmit}
+    >
+      <input
+        required
+        type="email"
+        placeholder="email do profissional"
+        className="w-56 rounded-lg border border-slate-300 p-2 text-sm"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <input
+        required
+        type="password"
+        minLength={8}
+        placeholder="senha (min. 8 caracteres)"
+        className="w-56 rounded-lg border border-slate-300 p-2 text-sm"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <button
+        type="submit"
+        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+        disabled={busy}
+      >
+        Criar acesso
       </button>
     </form>
   );

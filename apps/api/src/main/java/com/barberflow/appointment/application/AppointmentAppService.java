@@ -308,7 +308,77 @@ public class AppointmentAppService {
     return toResponse(entity, null);
   }
 
+  /**
+   * Agenda do PROPRIO profissional (papel BARBER, spec linha 218/361):
+   * autorizacao por recurso — o perfil vem do token (user_id), nunca do
+   * cliente. Sem perfil vinculado, negado.
+   */
+  @Transactional(readOnly = true)
+  public List<AppointmentResponse> barberAgenda(AuthPrincipal principal, LocalDate date) {
+    BarberJpaEntity barber = requireLinkedBarber(principal);
+    TenantJpaEntity tenant = requireTenant(principal.tenantId());
+    ZoneId zone = ZoneId.of(tenant.getTimezone());
+    Instant dayStart = date.atStartOfDay(zone).toInstant();
+    Instant dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant();
+
+    return appointments
+        .findByTenantIdAndBarberIdAndStartsAtBetweenOrderByStartsAtAsc(
+            principal.tenantId(), barber.getId(), dayStart, dayEnd)
+        .stream()
+        .map(entity -> toResponse(entity, null))
+        .toList();
+  }
+
+  /** Transicao de status na PROPRIA agenda do profissional (linha 361). */
+  @Transactional
+  public AppointmentResponse barberUpdateStatus(
+      AuthPrincipal principal, UUID appointmentId, String newStatus) {
+    BarberJpaEntity barber = requireLinkedBarber(principal);
+    AppointmentJpaEntity entity =
+        appointments
+            .findByIdAndTenantId(appointmentId, principal.tenantId())
+            .orElseThrow(() -> notFound("Reserva nao encontrada"));
+    if (!barber.getId().equals(entity.getBarberId())) {
+      // Agenda de outro profissional: 404 (nao revela existencia)
+      throw notFound("Reserva nao encontrada");
+    }
+    String previousStatus = entity.getStatus();
+    transition(entity, newStatus);
+    audits.record(
+        principal.tenantId(),
+        principal.userId(),
+        "APPOINTMENT_" + newStatus,
+        AuditService.ENTITY_APPOINTMENT,
+        entity.getId());
+    if ("CANCELLED".equals(newStatus)) {
+      outbox.append(
+          principal.tenantId(),
+          OutboxEvents.APPOINTMENT_CANCELLED,
+          null,
+          java.util.Map.of(
+              "appointmentId", entity.getId(),
+              "tenantId", principal.tenantId(),
+              "previousStatus", previousStatus,
+              "startsAt", entity.getStartsAt(),
+              "status", "CANCELLED"));
+      waitlist.process(principal.tenantId());
+    }
+    return toResponse(entity, null);
+  }
+
   // ------------------------------------------------------------------ internals
+
+  /** Perfil BARBER vinculado a conta autenticada; sem vinculo, negado. */
+  private BarberJpaEntity requireLinkedBarber(AuthPrincipal principal) {
+    if (principal == null) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Token de acesso necessario");
+    }
+    return barbers
+        .findByTenantIdAndUserId(principal.tenantId(), principal.userId())
+        .orElseThrow(
+            () -> new ResponseStatusException(
+                HttpStatus.FORBIDDEN, "Usuario sem perfil de profissional nesta barbearia"));
+  }
 
   private void validateSlot(
       TenantJpaEntity tenant,

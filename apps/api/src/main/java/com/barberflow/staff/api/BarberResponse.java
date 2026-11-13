@@ -12,6 +12,10 @@ public record BarberResponse(
     boolean active,
     Instant createdAt) {
 
+  /** Credenciais criadas para o profissional (papel BARBER). */
+  public record Credentials(
+      UUID barberId, UUID userId, String email, String role) {}
+
   public static BarberResponse from(BarberJpaEntity entity) {
     return new BarberResponse(
         entity.getId(),
