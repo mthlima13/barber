@@ -156,7 +156,32 @@ public class WaitlistService {
                 service.getId(),
                 request.startsAt(),
                 endsAt));
+    notifyManager(
+        tenant,
+        OutboxEvents.MANAGER_WAITLIST_JOINED,
+        "manager-waitlist-joined:" + saved.getId(),
+        java.util.Map.of(
+            "audience", "manager",
+            "entryId", saved.getId(),
+            "customerId", customer.getId(),
+            "startsAt", request.startsAt()));
     return toResponse(saved, true);
+  }
+
+  /**
+   * Notificacao ao gestor (WhatsApp do tenant em manager_phone): so e
+   * agendada quando o telefone esta configurado; entrega e do worker.
+   */
+  private void notifyManager(
+      TenantJpaEntity tenant,
+      String eventType,
+      String idempotencyKey,
+      java.util.Map<String, Object> payload) {
+    String phone = tenant.getManagerPhone();
+    if (phone == null || phone.isBlank()) {
+      return;
+    }
+    outbox.append(tenant.getId(), eventType, idempotencyKey, payload);
   }
 
   /**
@@ -330,6 +355,17 @@ public class WaitlistService {
             "serviceId", entry.getServiceId(),
             "startsAt", offer.getStartsAt(),
             "endsAt", offer.getEndsAt(),
+            "status", "PENDING",
+            "source", "WAITLIST"));
+    notifyManager(
+        tenant,
+        OutboxEvents.MANAGER_APPOINTMENT_CREATED,
+        "manager-appointment-created:" + saved.getId(),
+        java.util.Map.of(
+            "audience", "manager",
+            "appointmentId", saved.getId(),
+            "customerId", entry.getCustomerId(),
+            "startsAt", offer.getStartsAt(),
             "status", "PENDING",
             "source", "WAITLIST"));
 

@@ -39,6 +39,7 @@ export default function PainelLayout({
         { href: "/gestor/servicos", label: "Servicos" },
         { href: "/gestor/profissionais", label: "Profissionais" },
         { href: "/gestor/fila", label: "Fila de espera" },
+        { href: "/gestor/configuracoes", label: "Configuracoes" },
       ];
 
   return (

@@ -25,5 +25,13 @@ public final class OutboxEvents {
    */
   public static final String APPOINTMENT_REMINDER = "APPOINTMENT_REMINDER";
 
+  /**
+   * Notificacoes ao GESTOR (audience=manager no payload; destino e o
+   * manager_phone do tenant): reserva nova e inscricao na fila de espera.
+   */
+  public static final String MANAGER_APPOINTMENT_CREATED = "MANAGER_APPOINTMENT_CREATED";
+
+  public static final String MANAGER_WAITLIST_JOINED = "MANAGER_WAITLIST_JOINED";
+
   private OutboxEvents() {}
 }

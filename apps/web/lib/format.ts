@@ -69,6 +69,35 @@ export function todayIn(timeZone: string): string {
   return isoDateLocal(new Date().toISOString(), timeZone);
 }
 
+/** Mascara BR enquanto digita: (11) 97000-0000. */
+export function maskPhone(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  const d = digits.slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) {
+    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  }
+  return `(${d.slice(0, 2)}) ${d.slice(2, 3)} ${d.slice(3, 7)}-${d.slice(7)}`;
+}
+
+/**
+ * Normaliza o telefone para E.164 (formato exigido pela API e pelo
+ * WhatsApp Cloud API): o campo e mascarado como numero local BR
+ * (DDD + numero), entao prefixamos o DDI 55. Retorna null quando o
+ * numero nao tem tamanho plausivel.
+ */
+export function toE164(masked: string): string | null {
+  const digits = masked.replace(/\D/g, "").replace(/^0+/, "");
+  if (!masked.trim().startsWith("+")) {
+    if (digits.length < 10 || digits.length > 11) return null;
+    return `+55${digits}`;
+  }
+  // Usuario digitou DDI explicitamente: valida comprimento internacional
+  if (digits.length < 10 || digits.length > 15) return null;
+  return `+${digits}`;
+}
+
 /** Rotulo amigavel do status da reserva (maquina de estados da API). */
 export function statusLabel(status: string): string {
   switch (status) {

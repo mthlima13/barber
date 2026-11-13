@@ -195,8 +195,34 @@ public class AppointmentAppService {
             "endsAt", endsAt,
             "status", "PENDING",
             "source", "PUBLIC"));
+    notifyManager(
+        tenant,
+        OutboxEvents.MANAGER_APPOINTMENT_CREATED,
+        "manager-appointment-created:" + saved.getId(),
+        java.util.Map.of(
+            "audience", "manager",
+            "appointmentId", saved.getId(),
+            "customerId", customer.getId(),
+            "startsAt", request.startsAt(),
+            "status", "PENDING"));
 
     return new CreateResult(toResponse(saved, manageToken(saved)), true);
+  }
+
+  /**
+   * Notificacao ao gestor (WhatsApp do tenant em manager_phone): so e
+   * agendada quando o telefone esta configurado; entrega e do worker.
+   */
+  private void notifyManager(
+      TenantJpaEntity tenant,
+      String eventType,
+      String idempotencyKey,
+      java.util.Map<String, Object> payload) {
+    String phone = tenant.getManagerPhone();
+    if (phone == null || phone.isBlank()) {
+      return;
+    }
+    outbox.append(tenant.getId(), eventType, idempotencyKey, payload);
   }
 
   /** Resultado da criacao: distingue reserva nova de replay idempotente. */

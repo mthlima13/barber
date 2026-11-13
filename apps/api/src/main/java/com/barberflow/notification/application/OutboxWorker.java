@@ -4,6 +4,7 @@ import com.barberflow.appointment.infrastructure.CustomerJpaEntity;
 import com.barberflow.appointment.infrastructure.CustomerRepository;
 import com.barberflow.notification.infrastructure.OutboxEventJpaEntity;
 import com.barberflow.notification.infrastructure.OutboxRepository;
+import com.barberflow.tenant.infrastructure.TenantJpaEntity;
 import com.barberflow.tenant.infrastructure.TenantRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -103,9 +104,24 @@ public class OutboxWorker {
     }
   }
 
-  /** Telefone do destinatario via customerId do payload (spec 9.1). */
+  /**
+   * Telefone do destinatario: eventos de gestor (audience=manager) vão para
+   * o manager_phone do tenant; os demais, para o cliente do payload (spec 9.1).
+   */
   private String resolvePhone(OutboxEventJpaEntity event) {
     Map<String, Object> payload = parsePayload(event);
+    if ("manager".equals(payload.get("audience"))) {
+      TenantJpaEntity tenant =
+          tenants
+              .findById(event.getTenantId())
+              .orElseThrow(
+                  () -> new IllegalStateException("Tenant do evento nao existe"));
+      String phone = tenant.getManagerPhone();
+      if (phone == null || phone.isBlank()) {
+        throw new IllegalStateException("Gestor sem telefone configurado");
+      }
+      return phone;
+    }
     Object customerId = payload.get("customerId");
     if (customerId == null) {
       throw new IllegalStateException("Evento sem customerId no payload");

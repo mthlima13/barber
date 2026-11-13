@@ -464,3 +464,25 @@ export function processWaitlist(authToken: string) {
     token: authToken,
   });
 }
+
+// --------------------------------------------- dashboard: configuracoes
+
+/** Configuracoes da barbearia: WhatsApp do gestor para notificacoes. */
+export type Settings = { managerPhone: string | null };
+
+export function getSettings(authToken: string) {
+  return request<Settings>("GET", "/api/v1/dashboard/settings", {
+    token: authToken,
+  });
+}
+
+/** WhatsApp em E.164 ou null para desligar as notificacoes. */
+export function updateSettings(
+  managerPhone: string | null,
+  authToken: string,
+) {
+  return request<Settings>("PATCH", "/api/v1/dashboard/settings", {
+    json: { managerPhone },
+    token: authToken,
+  });
+}

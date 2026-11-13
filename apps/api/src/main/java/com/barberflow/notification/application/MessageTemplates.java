@@ -54,6 +54,17 @@ public final class MessageTemplates {
               + "! Lembrete: sua reserva esta marcada para "
               + when(payload, "startsAt", zone)
               + ". Se precisar remarcar ou cancelar, use o link seguro que voce recebeu.";
+      case OutboxEvents.MANAGER_APPOINTMENT_CREATED ->
+          "Nova reserva para "
+              + customerName
+              + ": "
+              + when(payload, "startsAt", zone)
+              + " (status pendente de confirmacao).";
+      case OutboxEvents.MANAGER_WAITLIST_JOINED ->
+          customerName
+              + " entrou na lista de espera para "
+              + when(payload, "startsAt", zone)
+              + ".";
       default -> null;
     };
   }

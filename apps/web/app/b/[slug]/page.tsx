@@ -16,7 +16,7 @@ import {
   type PublicService,
   type Slot,
 } from "@/lib/api";
-import { fullDate, price, slotRange, todayIn } from "@/lib/format";
+import { fullDate, maskPhone, price, slotRange, toE164, todayIn } from "@/lib/format";
 
 /**
  * Fluxo de reserva normal (spec, secao 9.1): servico -> profissional ->
@@ -590,34 +590,6 @@ function zoneIso(date: string, time: string, timeZone: string): string | null {
   const hh = String(Math.floor(abs / 60)).padStart(2, "0");
   const mm = String(abs % 60).padStart(2, "0");
   return `${date}T${time}:00${sign}${hh}:${mm}`;
-}
-
-/** Mascara BR enquanto digita: (11) 97000-0000. */
-function maskPhone(value: string): string {  const digits = value.replace(/\D/g, "");
-  const d = digits.slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-  if (d.length <= 10) {
-    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  }
-  return `(${d.slice(0, 2)}) ${d.slice(2, 3)} ${d.slice(3, 7)}-${d.slice(7)}`;
-}
-
-/**
- * Normaliza o telefone para E.164 (formato exigido pela API e pelo
- * WhatsApp Cloud API): o campo e mascarado como numero local BR
- * (DDD + numero), entao prefixamos o DDI 55. Retorna null quando o
- * numero nao tem tamanho plausivel.
- */
-function toE164(masked: string): string | null {
-  const digits = masked.replace(/\D/g, "").replace(/^0+/, "");
-  if (!masked.trim().startsWith("+")) {
-    if (digits.length < 10 || digits.length > 11) return null;
-    return `+55${digits}`;
-  }
-  // Usuario digitou DDI explicitamente: valida comprimento internacional
-  if (digits.length < 10 || digits.length > 15) return null;
-  return `+${digits}`;
 }
 
 function cryptoFallback(): string {

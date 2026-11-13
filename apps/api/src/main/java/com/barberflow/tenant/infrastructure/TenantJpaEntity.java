@@ -31,6 +31,10 @@ public class TenantJpaEntity {
   @Column(nullable = false)
   private String status;
 
+  /** WhatsApp do gestor para notificacoes de negocio (nulo = desligado). */
+  @Column(name = "manager_phone", length = 20)
+  private String managerPhone;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
@@ -75,6 +79,16 @@ public class TenantJpaEntity {
 
   public String getStatus() {
     return status;
+  }
+
+  public String getManagerPhone() {
+    return managerPhone;
+  }
+
+  /** WhatsApp do gestor (E.164) ou null para desligar as notificacoes. */
+  public void definirTelefoneGerente(String managerPhone) {
+    this.managerPhone =
+        managerPhone == null || managerPhone.isBlank() ? null : managerPhone;
   }
 
   public Instant getCreatedAt() {
