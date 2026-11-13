@@ -65,6 +65,8 @@ export type Appointment = {
   tenantId: string;
   barberId: string;
   customerId: string;
+  /** Resolvido no servidor (agenda do gestor e consulta do cliente). */
+  customerName?: string | null;
   serviceId: string;
   startsAt: string;
   endsAt: string;
@@ -466,6 +468,24 @@ export function processWaitlist(authToken: string) {
 }
 
 // -------------------------------------------------- dashboard: resumo
+
+/** Evento da fila de notificacoes (observabilidade no painel). */
+export type OutboxEvent = {
+  id: string;
+  eventType: string;
+  status: string;
+  attemptCount: number;
+  lastError: string | null;
+  messageId: string | null;
+  createdAt: string;
+};
+
+/** Ultimos eventos da outbox do tenant (mais recentes primeiro). */
+export function getOutbox(authToken: string) {
+  return request<OutboxEvent[]>("GET", "/api/v1/dashboard/outbox", {
+    token: authToken,
+  });
+}
 
 /** Cartoes resumo do painel (visao do dia em uma chamada). */
 export type DashboardSummary = {

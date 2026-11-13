@@ -165,5 +165,6 @@ mvn verify   # 91 testes de integracao; Testcontainers; requer Docker em execuca
 - [x] Metricas de negocio — contadores/gauges no Prometheus e checklist de observabilidade
 - [x] Lembrete 24h — job idempotente via outbox (`REMINDERS_ENABLED`)
 - [x] Expiracao de PENDING — job libera o slot e oferta a lista de espera (`APPOINTMENT_EXPIRY_ENABLED`)
+- [x] CI (GitHub Actions: mvn verify com Testcontainers + next build) e teste E2E do fluxo publico (`scripts/e2e.sh`)
 - [x] Web publico completo — avise-me (lista de espera) na pagina de reserva e telefone E.164
 - [ ] Fase 5 — Producao piloto (deploy real, backups, observabilidade em operacao, feedback da barbearia)

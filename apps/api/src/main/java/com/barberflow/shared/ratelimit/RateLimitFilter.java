@@ -95,9 +95,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
     if (path.startsWith("/api/v1/public/")) {
       return "GET".equals(request.getMethod()) ? Category.PUBLIC_READ : Category.PUBLIC_WRITE;
     }
-    // Aceite de oferta: credencial e o token do caminho, tambem sujeito a
-    // abuso (tentativa de adivinhar token) — limite de escrita publica.
-    if (path.startsWith("/api/v1/customer/offers/")) {
+    // Link seguro do cliente (consulta, cancelar/remarcar, aceite de
+    // oferta) e webhook da Meta: credencial no token/corpo/caminho e
+    // sujeitos a abuso (adivinhar token, hammering) — escrita publica.
+    if (path.startsWith("/api/v1/customer/")
+        || path.equals("/api/v1/webhooks/whatsapp")) {
       return Category.PUBLIC_WRITE;
     }
     return null;

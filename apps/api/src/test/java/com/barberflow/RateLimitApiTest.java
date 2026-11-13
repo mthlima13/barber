@@ -76,6 +76,28 @@ class RateLimitApiTest extends BaseIntegrationTest {
     }
   }
 
+  @Test
+  void customerLinkSafeRoutesAreRateLimited() throws Exception {
+    // Link seguro sem token: 401 do security, mas contado pelo filtro
+    // (roda antes da cadeia) — hammering de token estoura o bucket de
+    // escrita publica (150/min em teste), IP proprio via X-Forwarded-For
+    String ip = "203.0.113." + (300 + ThreadLocalRandom.current().nextInt(50));
+    HttpResponse<String> last = null;
+    boolean limited = false;
+    for (int i = 0; i < 200; i++) {
+      last =
+          getWithForwardedIp(
+              "/api/v1/customer/appointments/" + java.util.UUID.randomUUID(), ip);
+      if (last.statusCode() == 429) {
+        limited = true;
+        break;
+      }
+      assertThat(last.statusCode()).isEqualTo(401);
+    }
+    assertThat(limited).isTrue();
+    assertThat(last.body()).contains("Muitas requisicoes");
+  }
+
   // ------------------------------------------------------------------ helpers
 
   private static HttpResponse<String> postWithForwardedIp(String path, String ip)

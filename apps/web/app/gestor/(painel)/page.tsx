@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getAgenda,
+  getOutbox,
   getSummary,
   listBarbers,
   listServices,
@@ -11,6 +12,7 @@ import {
   type Appointment,
   type BarberAdmin,
   type DashboardSummary,
+  type OutboxEvent,
   type ServiceAdmin,
 } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -60,6 +62,7 @@ export default function AgendaPage() {
   const [services, setServices] = useState<ServiceAdmin[]>([]);
   const [barbers, setBarbers] = useState<BarberAdmin[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [outbox, setOutbox] = useState<OutboxEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -69,16 +72,18 @@ export default function AgendaPage() {
     if (!token) return;
     setError(null);
     try {
-      const [agenda, serviceList, barberList, daySummary] = await Promise.all([
+      const [agenda, serviceList, barberList, daySummary, events] = await Promise.all([
         getAgenda(date, token, barberId || undefined),
         listServices(token),
         listBarbers(token),
         getSummary(date, token).catch(() => null),
+        getOutbox(token).catch(() => null),
       ]);
       setItems(agenda);
       setServices(serviceList);
       setBarbers(barberList);
       setSummary(daySummary);
+      setOutbox(events);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         window.location.href = "/gestor/login";
@@ -204,9 +209,10 @@ export default function AgendaPage() {
             >
               <div className="min-w-48">
                 <p className="font-semibold">
-                  {dateTime(item.startsAt, "America/Sao_Paulo")}
+                  {item.customerName ?? "Cliente"}
                 </p>
                 <p className="text-xs text-slate-500">
+                  {dateTime(item.startsAt, "America/Sao_Paulo")} -{" "}
                   {serviceById.get(item.serviceId)?.name ?? "Servico"} -{" "}
                   {barberById.get(item.barberId)?.displayName ?? "Profissional"}{" "}
                   - {price(item.priceCents)}
@@ -243,6 +249,23 @@ export default function AgendaPage() {
           ))}
         </ul>
       )}
+
+      {outbox && outbox.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-sm font-bold text-slate-700">Notificacoes (outbox)</h2>
+          <p className="text-xs text-slate-500">
+            Fila de entrega de WhatsApp: {" "}
+            {outbox.filter((e) => e.status === "SENT").length} enviadas, {" "}
+            {outbox.filter((e) => e.status === "PENDING").length} pendentes, {" "}
+            {outbox.filter((e) => e.status === "FAILED").length} com falha.
+          </p>
+          <ul className="mt-2 grid gap-1">
+            {outbox.slice(0, 15).map((event) => (
+              <OutboxRow key={event.id} event={event} />
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
@@ -271,5 +294,38 @@ function SummaryCard({
         {hint}
       </p>
     </div>
+  );
+}
+
+/** Linha da outbox no painel (falha destacada com o erro da ultima tentativa). */
+function OutboxRow({ event }: { event: OutboxEvent }) {
+  const badge =
+    event.status === "SENT"
+      ? "bg-green-100 text-green-800"
+      : event.status === "FAILED"
+        ? "bg-red-100 text-red-700"
+        : "bg-amber-100 text-amber-800";
+  return (
+    <li
+      className={`flex flex-wrap items-center gap-2 rounded-lg border p-2 text-xs ${
+        event.status === "FAILED"
+          ? "border-red-200 bg-red-50"
+          : "border-slate-200 bg-white"
+      }`}
+    >
+      <span className={`rounded-full px-2 py-0.5 font-semibold ${badge}`}>
+        {event.status}
+      </span>
+      <span className="font-medium">{event.eventType}</span>
+      <span className="text-slate-500">{dateTime(event.createdAt, "America/Sao_Paulo")}</span>
+      {event.attemptCount > 1 && (
+        <span className="text-slate-400">({event.attemptCount} tentativas)</span>
+      )}
+      {event.lastError && (
+        <span className="ml-auto max-w-full truncate text-red-700" title={event.lastError}>
+          {event.lastError}
+        </span>
+      )}
+    </li>
   );
 }

@@ -68,6 +68,10 @@ versões — deploy e migração controlados separadamente quando possível.
 4. Templates do WhatsApp aprovados pela Meta (se `WHATSAPP_ENABLED=true`);
    webhook assinado com `hub.verify_token` correto
 5. Smoke test: `BASE_URL=... WEB_URL=... ./scripts/smoke.sh`
+6. Teste E2E do fluxo completo (reservar, remarcar, cancelar, avise-me):
+   `BASE_URL=... MANAGER_EMAIL=... MANAGER_PASSWORD=... ./scripts/e2e.sh`
+7. CI roda a cada push (GitHub Actions: `mvn verify` com PostgreSQL real
+   e `next build` do web) — veja a aba Actions do repositorio
 6. Plano de **rollback**: imagem anterior disponível; migrations retrocompatíveis
 
 ## 6. Piloto

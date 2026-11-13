@@ -518,6 +518,10 @@ public class AppointmentAppService {
         entity.getTenantId(),
         entity.getBarberId(),
         entity.getCustomerId(),
+        customers
+            .findById(entity.getCustomerId())
+            .map(CustomerJpaEntity::getName)
+            .orElse(null),
         entity.getServiceId(),
         entity.getStartsAt(),
         entity.getEndsAt(),

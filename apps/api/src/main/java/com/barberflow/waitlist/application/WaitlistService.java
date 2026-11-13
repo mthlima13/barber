@@ -374,6 +374,9 @@ public class WaitlistService {
         saved.getTenantId(),
         saved.getBarberId(),
         saved.getCustomerId(),
+        customers.findById(saved.getCustomerId())
+            .map(CustomerJpaEntity::getName)
+            .orElse(null),
         saved.getServiceId(),
         saved.getStartsAt(),
         saved.getEndsAt(),
