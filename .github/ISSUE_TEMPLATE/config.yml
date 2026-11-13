@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Plano do piloto
+    url: https://github.com/mthlima13/barber/blob/main/docs/PILOTO.md
+    about: Roteiro de observação, métricas e rotina de feedback da barbearia piloto.

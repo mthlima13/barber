@@ -1,0 +1,72 @@
+name: Feedback do piloto
+description: Fricção ou aprendizado observado na barbearia piloto (rotina de docs/PILOTO.md)
+labels: ["piloto"]
+body:
+  - type: dropdown
+    id: persona
+    attributes:
+      label: Quem sentiu
+      options:
+        - Gestor
+        - Barbeiro
+        - Cliente
+        - Operador
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Agendamento público (site)
+        - Link seguro do cliente (cancelar/remarcar)
+        - Painel do gestor (agenda, fila, notificações)
+        - WhatsApp (lembrete, avisos)
+        - Setup/deploy
+    validations:
+      required: true
+  - type: dropdown
+    id: impacto
+    attributes:
+      label: Impacto
+      options:
+        - Bloqueia o piloto (parou o trabalho)
+        - Incomoda (tem contorno)
+        - Desejo (não travou nada)
+    validations:
+      required: true
+  - type: textarea
+    id: o-que-aconteceu
+    attributes:
+      label: O que aconteceu
+      description: Passo a passo do que a pessoa tentou fazer e onde travou. Se for bug, é outro template (use o de bug).
+    validations:
+      required: true
+  - type: textarea
+    id: o-que-esperava
+    attributes:
+      label: O que a pessoa esperava
+    validations:
+      required: true
+  - type: dropdown
+    id: frequencia
+    attributes:
+      label: Frequência
+      options:
+        - Uma vez
+        - Às vezes
+        - Sempre que tenta
+    validations:
+      required: true
+  - type: input
+    id: data
+    attributes:
+      label: Quando foi observado
+      placeholder: "12/11/2026, manhã"
+    validations:
+      required: true
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Print/áudio/metrica
+      description: Link do print, transcrição do áudio do WhatsApp ou valor de métrica (painel/Prometheus).

@@ -72,11 +72,15 @@ versões — deploy e migração controlados separadamente quando possível.
    `BASE_URL=... MANAGER_EMAIL=... MANAGER_PASSWORD=... ./scripts/e2e.sh`
 7. CI roda a cada push (GitHub Actions: `mvn verify` com PostgreSQL real
    e `next build` do web) — veja a aba Actions do repositorio
-6. Plano de **rollback**: imagem anterior disponível; migrations retrocompatíveis
+8. Plano de **rollback**: imagem anterior disponível; migrations retrocompatíveis
 
 ## 6. Piloto
 
+Roteiro completo de observação, métricas e rotina de feedback em
+[`docs/PILOTO.md`](PILOTO.md). Resumo dos pré-requisitos:
+
 - [ ] Uma barbearia real, horários e clientes de teste claramente marcados
-- [ ] Coleta de feedback registrada (UX, agenda, fila, WhatsApp)
+- [ ] Coleta de feedback registrada (UX, agenda, fila, WhatsApp) via
+      issue template `Feedback do piloto`
 - [ ] Métricas de negócio acompanhadas: reservas criadas/canceladas, conflito,
       conversão da lista de espera (spec, linha 293)

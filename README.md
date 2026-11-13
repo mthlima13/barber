@@ -161,6 +161,7 @@ mvn verify   # 91 testes de integracao; Testcontainers; requer Docker em execuca
 - [x] Fase 4 — WhatsApp (Cloud API): worker da outbox e webhook da Meta (entrega real depende de credenciais)
 - [x] LGPD — Consentimento na coleta, acesso/exclusao do titular via link seguro, politica de privacidade e retencao configuravel
 - [x] Fase 5 (preparacao) — Headers de seguranca (CSP/HSTS) na API e no web, perfil `prod` fail-fast, smoke test e checklist de producao (`docs/PRODUCAO.md`); deploy fica para quando houver infra
+- [x] Plano do piloto — roteiro de observacao, hipoteses com criterio de sucesso e template de feedback (`docs/PILOTO.md`)
 - [x] Papel BARBER — acesso restrito a propria agenda, com login criado pelo gestor
 - [x] Metricas de negocio — contadores/gauges no Prometheus e checklist de observabilidade
 - [x] Lembrete 24h — job idempotente via outbox (`REMINDERS_ENABLED`)
