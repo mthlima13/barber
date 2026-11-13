@@ -27,6 +27,9 @@ por WhatsApp. Ver especificacao completa em [`BARBERFLOW_ARQUITETURA.md`](BARBER
   sem segredos. Enquanto `WHATSAPP_ENABLED=false`, envio simulado em log
 - **Lembrete 24h**: job periodico idempotente (chave unica por reserva na
   outbox) agenda o lembrete das reservas PENDING/CONFIRMED na janela
+- **Notificacao ao gestor**: o WhatsApp configurado em
+  `/gestor/configuracoes` recebe reserva nova (inclusive via fila) e
+  inscricao na lista de espera, pela mesma outbox; vazio desliga
 - **LGPD**: consentimento obrigatorio na reserva e na fila, politica em
   `/privacidade`, acesso/exclusao do titular (anonimizacao irreversivel) e
   retencao automatica configuravel
@@ -56,6 +59,7 @@ Dashboard do gestor (`MANAGER`) e agenda do profissional (`BARBER`):
 - `GET /api/v1/dashboard/appointments?date=` + `PATCH /{id}/status`
 - `GET /api/v1/dashboard/waitlist` + `POST /waitlist/process`
 - `GET /api/v1/dashboard/outbox` e `GET /api/v1/dashboard/audit`
+- `GET|PATCH /api/v1/dashboard/settings` — WhatsApp do gestor
 - `GET /api/v1/dashboard/barber/agenda?date=` + `PATCH .../appointments/{id}/status` (BARBER)
 
 Webhooks e operacao:
