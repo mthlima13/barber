@@ -14,6 +14,7 @@ import com.barberflow.staff.infrastructure.BarberRepository;
 import com.barberflow.tenant.infrastructure.TenantJpaEntity;
 import com.barberflow.tenant.infrastructure.TenantRepository;
 import com.barberflow.waitlist.api.CreateWaitlistRequest;
+import com.barberflow.waitlist.api.WaitlistDashboardResponse;
 import com.barberflow.waitlist.api.WaitlistEntryResponse;
 import com.barberflow.waitlist.infrastructure.SlotOfferJpaEntity;
 import com.barberflow.waitlist.infrastructure.SlotOfferRepository;
@@ -363,6 +364,46 @@ public class WaitlistService {
 
   private String manageToken(AppointmentJpaEntity entity) {
     return jwt.issue(new AuthPrincipal(entity.getId(), entity.getTenantId(), "CUSTOMER"));
+  }
+
+  /**
+   * Fila para o dashboard (gestor): cliente resolvido em nome/telefone e
+   * oferta corrente com o slot ofertado — a pagina nao resolve ids nos
+   * catalogos para mostrar quem esta na fila. Sem tokens de cliente.
+   */
+  @Transactional(readOnly = true)
+  public List<WaitlistDashboardResponse> dashboardList(UUID tenantId) {
+    return entries.findByTenantIdOrderByCreatedAtDesc(tenantId).stream()
+        .map(this::toDashboardResponse)
+        .toList();
+  }
+
+  private WaitlistDashboardResponse toDashboardResponse(WaitlistEntryJpaEntity entry) {
+    CustomerJpaEntity customer = customers.findById(entry.getCustomerId()).orElse(null);
+    WaitlistDashboardResponse.OfferView offerView = null;
+    if ("OFFERED".equals(entry.getStatus())) {
+      List<SlotOfferJpaEntity> pending =
+          offers.findByTenantIdAndWaitlistEntryIdAndStatus(
+              entry.getTenantId(), entry.getId(), "PENDING");
+      if (!pending.isEmpty()) {
+        SlotOfferJpaEntity offer = pending.get(0);
+        offerView =
+            new WaitlistDashboardResponse.OfferView(
+                offer.getId(), offer.getStartsAt(), offer.getEndsAt(), offer.getExpiresAt());
+      }
+    }
+    return new WaitlistDashboardResponse(
+        entry.getId(),
+        entry.getBarberId(),
+        entry.getServiceId(),
+        customer == null ? "Cliente removido" : customer.getName(),
+        customer == null ? null : customer.getPhoneE164(),
+        entry.getDesiredStartAt(),
+        entry.getDesiredEndAt(),
+        entry.getStatus(),
+        entry.getCreatedAt(),
+        entry.getExpiresAt(),
+        offerView);
   }
 
   private WaitlistEntryResponse toResponse(WaitlistEntryJpaEntity entry, boolean withToken) {

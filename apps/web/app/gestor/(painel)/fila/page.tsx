@@ -117,16 +117,30 @@ export default function FilaPage() {
               className="flex flex-wrap items-center gap-3 rounded-lg bg-white p-4 shadow"
             >
               <div className="min-w-56">
-                <p className="font-semibold">
-                  {slotTime(entry.desiredStartAt, "America/Sao_Paulo")} -{" "}
-                  {slotTime(entry.desiredEndAt, "America/Sao_Paulo")}
-                </p>
+                <p className="font-semibold">{entry.customerName}</p>
                 <p className="text-xs text-slate-500">
+                  {entry.customerPhone ?? "sem telefone"}
+                  {" - "}
                   {serviceById.get(entry.serviceId)?.name ?? "Servico"} -{" "}
                   {barberById.get(entry.barberId)?.displayName ?? "Profissional"}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Desejado: {slotTime(entry.desiredStartAt, "America/Sao_Paulo")} -{" "}
+                  {slotTime(entry.desiredEndAt, "America/Sao_Paulo")}
                   {" - "}
                   inscrito em {dateTime(entry.createdAt, "America/Sao_Paulo")}
                 </p>
+                {entry.offer && (
+                  <p className="text-xs text-blue-700">
+                    Ofertado: {slotTime(entry.offer.startsAt, "America/Sao_Paulo")} -{" "}
+                    {slotTime(entry.offer.endsAt, "America/Sao_Paulo")}
+                    {entry.offer.expiresAt &&
+                      ` (expira em ${dateTime(
+                        entry.offer.expiresAt,
+                        "America/Sao_Paulo",
+                      )})`}
+                  </p>
+                )}
                 {entry.expiresAt && (
                   <p className="text-xs text-amber-700">
                     Oferta expira em {dateTime(entry.expiresAt, "America/Sao_Paulo")}

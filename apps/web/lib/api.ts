@@ -414,16 +414,23 @@ export function putBarberHours(
 
 export type WaitlistEntry = {
   id: string;
-  tenantId: string;
   barberId: string;
-  customerId: string;
   serviceId: string;
+  /** Cliente resolvido pela API (o painel nao recebe mais ids brutos). */
+  customerName: string;
+  customerPhone: string | null;
   desiredStartAt: string;
   desiredEndAt: string;
   status: string;
   createdAt: string;
-  updatedAt: string;
   expiresAt: string | null;
+  /** Oferta corrente da inscricao (nula enquanto WAITING/CANCELLED). */
+  offer: {
+    offerId: string;
+    startsAt: string;
+    endsAt: string;
+    expiresAt: string | null;
+  } | null;
 };
 
 export function listWaitlist(authToken: string) {

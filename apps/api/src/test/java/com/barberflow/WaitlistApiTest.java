@@ -84,6 +84,26 @@ class WaitlistApiTest extends BaseIntegrationTest {
   }
 
   @org.junit.jupiter.api.Test
+  void dashboardListResolvesCustomerAndOffer() throws Exception {
+    var created = join("10:45", PHONE1);
+    assertThat(created.statusCode()).isEqualTo(201);
+    // Cancelamento processa a fila: a entrada vai para OFFERED com hold
+    bookAndCancel("10:45");
+
+    var list = callAuth("GET", "/api/v1/dashboard/waitlist", null);
+
+    assertThat(list.statusCode()).isEqualTo(200);
+    // Cliente resolvido (nome/telefone), sem depender de ids brutos
+    assertThat(list.body()).contains("Cliente Fila");
+    assertThat(list.body()).contains(PHONE1);
+    // Slot ofertado visivel no dashboard
+    assertThat(list.body()).contains("\"offer\":{\"offerId\":");
+    assertThat(list.body()).contains("\"startsAt\"");
+    // Tokens de aceite nao vazam no painel (so no link seguro do cliente)
+    assertThat(list.body()).doesNotContain("acceptToken");
+  }
+
+  @org.junit.jupiter.api.Test
   void cancelOffersFreedSlotToWaitlistAndHoldsIt() throws Exception {
     var created = join("10:15", PHONE1);
     String entryId = extractId(created.body());
