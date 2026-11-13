@@ -54,6 +54,13 @@ public final class MessageTemplates {
               + "! Lembrete: sua reserva esta marcada para "
               + when(payload, "startsAt", zone)
               + ". Se precisar remarcar ou cancelar, use o link seguro que voce recebeu.";
+      case OutboxEvents.APPOINTMENT_EXPIRED ->
+          "Ola, "
+              + customerName
+              + "! Sua reserva de "
+              + when(payload, "startsAt", zone)
+              + " expirou: estava pendente de confirmacao e foi cancelada automaticamente."
+              + " Quando quiser, agende um novo horario.";
       case OutboxEvents.MANAGER_APPOINTMENT_CREATED ->
           "Nova reserva para "
               + customerName

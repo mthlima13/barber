@@ -28,8 +28,13 @@ por WhatsApp. Ver especificacao completa em [`BARBERFLOW_ARQUITETURA.md`](BARBER
 - **Lembrete 24h**: job periodico idempotente (chave unica por reserva na
   outbox) agenda o lembrete das reservas PENDING/CONFIRMED na janela
 - **Notificacao ao gestor**: o WhatsApp configurado em
-  `/gestor/configuracoes` recebe reserva nova (inclusive via fila) e
-  inscricao na lista de espera, pela mesma outbox; vazio desliga
+  `/gestor/configuracoes` recebe reserva nova (inclusive via fila),
+  inscricao na lista de espera, cancelamento e remarcacao feitos pelo
+  cliente, pela mesma outbox; vazio desliga
+- **Expiracao de PENDING**: job periodico cancela a reserva pendente de
+  confirmacao alem do prazo (`APPOINTMENT_EXPIRY_PENDING_TTL_HOURS`,
+  padrao 24h), libera o slot, oferta a lista de espera e notifica o
+  cliente; desligado por padrao no dev
 - **LGPD**: consentimento obrigatorio na reserva e na fila, politica em
   `/privacidade`, acesso/exclusao do titular (anonimizacao irreversivel) e
   retencao automatica configuravel
@@ -159,5 +164,6 @@ mvn verify   # 91 testes de integracao; Testcontainers; requer Docker em execuca
 - [x] Papel BARBER — acesso restrito a propria agenda, com login criado pelo gestor
 - [x] Metricas de negocio — contadores/gauges no Prometheus e checklist de observabilidade
 - [x] Lembrete 24h — job idempotente via outbox (`REMINDERS_ENABLED`)
+- [x] Expiracao de PENDING — job libera o slot e oferta a lista de espera (`APPOINTMENT_EXPIRY_ENABLED`)
 - [x] Web publico completo — avise-me (lista de espera) na pagina de reserva e telefone E.164
 - [ ] Fase 5 — Producao piloto (deploy real, backups, observabilidade em operacao, feedback da barbearia)

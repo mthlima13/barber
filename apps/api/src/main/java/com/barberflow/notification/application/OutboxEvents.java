@@ -26,6 +26,13 @@ public final class OutboxEvents {
   public static final String APPOINTMENT_REMINDER = "APPOINTMENT_REMINDER";
 
   /**
+   * Expiracao automatica de PENDING (job): a reserva estava pendente de
+   * confirmacao alem do prazo configurado e foi cancelada pelo sistema,
+   * liberando o slot (spec, linha 137).
+   */
+  public static final String APPOINTMENT_EXPIRED = "APPOINTMENT_EXPIRED";
+
+  /**
    * Notificacoes ao GESTOR (audience=manager no payload; destino e o
    * manager_phone do tenant): reserva nova e inscricao na fila de espera.
    */

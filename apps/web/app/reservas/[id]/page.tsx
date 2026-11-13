@@ -13,12 +13,22 @@ import {
 } from "@/lib/api";
 import { DEFAULT_SLUG } from "@/lib/api";
 import {
-  dateTime,
+  fullDate,
   price,
   slotRange,
+  slotTime,
   statusLabel,
   todayIn,
 } from "@/lib/format";
+
+/** Cores do selo de status (mesma familia do painel do gestor). */
+const STATUS_BADGE: Record<string, string> = {
+  PENDING: "bg-amber-100 text-amber-800",
+  CONFIRMED: "bg-green-100 text-green-800",
+  COMPLETED: "bg-slate-200 text-slate-700",
+  CANCELLED: "bg-red-100 text-red-700",
+  NO_SHOW: "bg-red-100 text-red-700",
+};
 
 /**
  * Link seguro de gerenciamento (spec, secao 9.1): o token de gerenciamento
@@ -156,15 +166,28 @@ function ManageContent() {
   return (
     <main className="mx-auto max-w-lg p-6">
       <div className="rounded-lg bg-white p-6 shadow">
-        <h1 className="text-xl font-bold">Minha reserva</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-xl font-bold">Minha reserva</h1>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              STATUS_BADGE[appointment.status] ?? "bg-slate-100 text-slate-700"
+            }`}
+          >
+            {statusLabel(appointment.status)}
+          </span>
+        </div>
         <p className="mt-1 text-xs text-slate-500">
           Protocolo <span className="font-mono">{appointment.id}</span>
         </p>
 
         <dl className="mt-4 grid gap-1 text-sm">
           <div className="flex gap-2">
-            <dt className="font-semibold">Data e hora:</dt>
-            <dd>{dateTime(appointment.startsAt, timezone)}</dd>
+            <dt className="font-semibold">Data:</dt>
+            <dd>{fullDate(appointment.startsAt, timezone)}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="font-semibold">Horario:</dt>
+            <dd>{slotTime(appointment.startsAt, timezone)}</dd>
           </div>
           <div className="flex gap-2">
             <dt className="font-semibold">Duracao:</dt>
@@ -174,11 +197,15 @@ function ManageContent() {
             <dt className="font-semibold">Valor:</dt>
             <dd>{price(appointment.priceCents)}</dd>
           </div>
-          <div className="flex gap-2">
-            <dt className="font-semibold">Status:</dt>
-            <dd>{statusLabel(appointment.status)}</dd>
-          </div>
         </dl>
+
+        {canChange && (
+          <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
+            Voce recebe um lembrete pelo WhatsApp ate 24 horas antes da
+            reserva. Se precisar, cancele ou remarque por aqui a qualquer
+            momento.
+          </p>
+        )}
 
         {message && (
           <p className="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">

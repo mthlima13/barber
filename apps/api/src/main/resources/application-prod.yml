@@ -26,6 +26,11 @@ barberflow:
     # Lembrete 24h ativo em producao (janela de 24h, varredura a cada 15 min)
     enabled: ${REMINDERS_ENABLED:true}
     window-hours: ${REMINDERS_WINDOW_HOURS:24}
+  appointment-expiry:
+    # Expiracao de PENDING ativa em producao: reserva pendente de
+    # confirmacao por mais de 24h e cancelada pelo job (spec, linha 137)
+    enabled: ${APPOINTMENT_EXPIRY_ENABLED:true}
+    pending-ttl-hours: ${APPOINTMENT_EXPIRY_PENDING_TTL_HOURS:24}
   privacy:
     # Retencao LGPD ativa em producao (anonimizacao automatica)
     retention-enabled: ${PRIVACY_RETENTION_ENABLED:true}

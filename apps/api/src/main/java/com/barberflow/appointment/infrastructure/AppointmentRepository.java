@@ -33,4 +33,10 @@ public interface AppointmentRepository extends JpaRepository<AppointmentJpaEntit
   /** Lembrete 24h (Fase 4): reservas na janela de antecedencia, todos os tenants. */
   List<AppointmentJpaEntity> findByStatusInAndStartsAtBetween(
       Collection<String> statuses, Instant windowStart, Instant windowEnd);
+
+  /**
+   * Expiracao de PENDING (spec, linha 137): reservas pendentes criadas
+   * antes do corte (agora menos o prazo configurado), todos os tenants.
+   */
+  List<AppointmentJpaEntity> findByStatusAndCreatedAtBefore(String status, Instant cutoff);
 }

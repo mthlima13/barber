@@ -54,6 +54,10 @@ public abstract class BaseIntegrationTest {
     // larga para a reserva de +3 dias entrar na varredura
     registry.add("barberflow.reminders.enabled", () -> "false");
     registry.add("barberflow.reminders.window-hours", () -> "720");
+    // Expiracao de PENDING: desligada no @Scheduled (job manual no teste) e
+    // TTL zero (expira tudo criado antes da varredura)
+    registry.add("barberflow.appointment-expiry.enabled", () -> "false");
+    registry.add("barberflow.appointment-expiry.pending-ttl-hours", () -> "0");
   }
 
   private static final HttpClient HTTP = HttpClient.newHttpClient();
