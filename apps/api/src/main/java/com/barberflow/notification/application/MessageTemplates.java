@@ -35,6 +35,12 @@ public final class MessageTemplates {
               + "! Sua reserva de "
               + when(payload, "startsAt", zone)
               + " foi cancelada. Quando quiser, agende um novo horario.";
+      case OutboxEvents.APPOINTMENT_CONFIRMED ->
+          "Boa, "
+              + customerName
+              + "! Sua reserva de "
+              + when(payload, "startsAt", zone)
+              + " esta CONFIRMADA. Ate la!";
       case OutboxEvents.APPOINTMENT_RESCHEDULED ->
           "Ola, "
               + customerName

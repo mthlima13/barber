@@ -13,6 +13,9 @@ public final class OutboxEvents {
   /** Reserva cancelada pelo cliente ou pelo gestor (spec, secao 9.2.2). */
   public static final String APPOINTMENT_CANCELLED = "APPOINTMENT_CANCELLED";
 
+  /** Reserva CONFIRMADA pelo gestor no painel (fecho para o cliente). */
+  public static final String APPOINTMENT_CONFIRMED = "APPOINTMENT_CONFIRMED";
+
   /** Reserva remarcada pelo cliente pelo link seguro. */
   public static final String APPOINTMENT_RESCHEDULED = "APPOINTMENT_RESCHEDULED";
 

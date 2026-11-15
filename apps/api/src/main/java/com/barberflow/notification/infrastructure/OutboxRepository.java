@@ -1,9 +1,11 @@
 package com.barberflow.notification.infrastructure;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +15,10 @@ public interface OutboxRepository extends JpaRepository<OutboxEventJpaEntity, UU
 
   /** Observabilidade no dashboard (mais recentes primeiro). */
   List<OutboxEventJpaEntity> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+
+  /** Observabilidade no dashboard, PAGINADA (o painel le so as ultimas). */
+  Page<OutboxEventJpaEntity> findByTenantIdOrderByCreatedAtDesc(
+      UUID tenantId, Pageable pageable);
 
   Optional<OutboxEventJpaEntity> findByTenantIdAndIdempotencyKey(
       UUID tenantId, String idempotencyKey);

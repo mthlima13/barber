@@ -22,6 +22,9 @@ barberflow:
     # O operador decide explicitamente (credenciais da Meta obrigatorias
     # quando true: phone-number-id, access-token, app-secret, verify-token)
     enabled: ${WHATSAPP_ENABLED}
+    # Mensagens iniciadas pela barbearia saem da janela de 24h: envio por
+    # TEMPLATE aprovado na Meta (lista em docs/WHATSAPP.md); vazio = texto
+    template-language: ${WHATSAPP_TEMPLATE_LANGUAGE:pt_BR}
   reminders:
     # Lembrete 24h ativo em producao (janela de 24h, varredura a cada 15 min)
     enabled: ${REMINDERS_ENABLED:true}

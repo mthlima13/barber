@@ -1,13 +1,19 @@
 package com.barberflow.notification.application;
 
+import com.barberflow.appointment.infrastructure.AppointmentJpaEntity;
+import com.barberflow.appointment.infrastructure.AppointmentRepository;
 import com.barberflow.appointment.infrastructure.CustomerJpaEntity;
 import com.barberflow.appointment.infrastructure.CustomerRepository;
 import com.barberflow.notification.infrastructure.OutboxEventJpaEntity;
 import com.barberflow.notification.infrastructure.OutboxRepository;
+import com.barberflow.notification.infrastructure.WhatsAppProperties;
 import com.barberflow.tenant.infrastructure.TenantJpaEntity;
 import com.barberflow.tenant.infrastructure.TenantRepository;
+import com.barberflow.waitlist.infrastructure.WaitlistEntryJpaEntity;
+import com.barberflow.waitlist.infrastructure.WaitlistEntryRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -35,27 +41,36 @@ public class OutboxWorker {
   private final OutboxRepository outbox;
   private final CustomerRepository customers;
   private final TenantRepository tenants;
+  private final AppointmentRepository appointments;
+  private final WaitlistEntryRepository waitlistEntries;
   private final WhatsAppClient whatsApp;
   private final OutboxDeliveryService delivery;
   private final com.barberflow.metrics.BusinessMetrics metrics;
   private final ObjectMapper mapper = new ObjectMapper();
   private final Object lock = new Object();
   private final long firstBackoffSeconds;
+  private final WhatsAppProperties whatsAppProperties;
 
   public OutboxWorker(
       OutboxRepository outbox,
       CustomerRepository customers,
       TenantRepository tenants,
+      AppointmentRepository appointments,
+      WaitlistEntryRepository waitlistEntries,
       WhatsAppClient whatsApp,
       OutboxDeliveryService delivery,
       com.barberflow.metrics.BusinessMetrics metrics,
+      WhatsAppProperties whatsAppProperties,
       @Value("${barberflow.whatsapp.first-backoff-seconds:30}") long firstBackoffSeconds) {
     this.outbox = outbox;
     this.customers = customers;
     this.tenants = tenants;
+    this.appointments = appointments;
+    this.waitlistEntries = waitlistEntries;
     this.whatsApp = whatsApp;
     this.delivery = delivery;
     this.metrics = metrics;
+    this.whatsAppProperties = whatsAppProperties;
     this.firstBackoffSeconds = firstBackoffSeconds;
   }
 
@@ -87,9 +102,30 @@ public class OutboxWorker {
       return;
     }
     try {
+      // Supressao: o evento pode ter perdido a razao de existir entre o
+      // agendamento e a entrega (reserva cancelada, inscricao fora da fila)
+      String motivoSupressao = supressao(event);
+      if (motivoSupressao != null) {
+        delivery.markSkipped(event.getId(), motivoSupressao);
+        return;
+      }
       String phone = resolvePhone(event);
       String message = renderMessage(event, phone);
-      String messageId = whatsApp.sendText(phone, message);
+      String messageId;
+      if (whatsAppProperties.templateLanguage() != null
+          && !whatsAppProperties.templateLanguage().isBlank()) {
+        // Mensagem iniciada pela barbearia fora da janela de 24h: so
+        // TEMPLATE passa (corpo {{1}} com o texto renderizado; nomes dos
+        // templates aprovados na Meta derivam do tipo do evento)
+        messageId =
+            whatsApp.sendTemplate(
+                phone,
+                event.getEventType().toLowerCase(Locale.ROOT),
+                whatsAppProperties.templateLanguage(),
+                message);
+      } else {
+        messageId = whatsApp.sendText(phone, message);
+      }
       delivery.markSent(event.getId(), messageId);
     } catch (Exception e) {
       // Falha transitoria -> backoff exponencial; permanente/esgotado -> FAILED
@@ -102,6 +138,38 @@ public class OutboxWorker {
         delivery.markRetry(event.getId(), cause, Instant.now().plusSeconds(backoffSeconds));
       }
     }
+  }
+
+  /**
+   * Motivo de supressao do evento (null = enviar): lembrete de reserva que
+   * o cliente cancelou entre o agendamento e a entrega; oferta de slot
+   * para inscricao que nao esta mais aguardando (aceitou outra oferta,
+   * expirou ou saiu da fila). Erros de lookup NAO suprimem: podem ser
+   * transitorios e seguem o ciclo de retry/FAILED.
+   */
+  private String supressao(OutboxEventJpaEntity event) {
+    Map<String, Object> payload = parsePayload(event);
+    Object appointmentId = payload.get("appointmentId");
+    if (OutboxEvents.APPOINTMENT_REMINDER.equals(event.getEventType())
+        && appointmentId != null) {
+      return appointments
+          .findById(UUID.fromString(appointmentId.toString()))
+          .filter(a -> "CANCELLED".equals(a.getStatus()))
+          .map(a -> "Reserva cancelada antes da entrega; lembrete suprimido")
+          .orElse(null);
+    }
+    Object entryId = payload.get("entryId");
+    if (OutboxEvents.WAITLIST_SLOT_AVAILABLE.equals(event.getEventType())
+        && entryId != null) {
+      return waitlistEntries
+          .findById(UUID.fromString(entryId.toString()))
+          .filter(entry -> !"WAITING".equals(entry.getStatus())
+              && !"OFFERED".equals(entry.getStatus()))
+          .map(entry -> "Inscricao fora da fila (" + entry.getStatus()
+              + "); oferta suprimida")
+          .orElse(null);
+    }
+    return null;
   }
 
   /**

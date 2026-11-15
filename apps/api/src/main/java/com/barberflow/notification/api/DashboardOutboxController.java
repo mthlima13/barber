@@ -28,8 +28,12 @@ public class DashboardOutboxController {
   @GetMapping
   @Transactional(readOnly = true)
   public List<OutboxEventResponse> list() {
+    // Paginada: o historico cresce sem freio em producao — o painel le
+    // apenas os 100 eventos mais recentes (spec, linha 293)
     return outbox
-        .findByTenantIdOrderByCreatedAtDesc(tenants.requireCurrentTenantId())
+        .findByTenantIdOrderByCreatedAtDesc(
+            tenants.requireCurrentTenantId(), org.springframework.data.domain.PageRequest.of(0, 100))
+        .getContent()
         .stream()
         .map(OutboxEventResponse::from)
         .toList();

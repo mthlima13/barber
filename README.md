@@ -23,8 +23,10 @@ por WhatsApp. Ver especificacao completa em [`BARBERFLOW_ARQUITETURA.md`](BARBER
   token com revalidacao do slot e expiracao de 5 minutos que devolve a
   vaga ao proximo da fila
 - **WhatsApp (Cloud API)**: entrega via outbox (worker com retry/backoff),
-  webhook da Meta com assinatura HMAC validada e dedupe; templates pt-BR
-  sem segredos. Enquanto `WHATSAPP_ENABLED=false`, envio simulado em log
+  webhook da Meta com assinatura HMAC validada e dedupe; mensagem
+  **template** por padrao (nomes derivados do evento, lista em
+  `docs/WHATSAPP.md` — fora da janela de 24h a Meta so aceita template).
+  Enquanto `WHATSAPP_ENABLED=false`, envio simulado em log
 - **Lembrete 24h**: job periodico idempotente (chave unica por reserva na
   outbox) agenda o lembrete das reservas PENDING/CONFIRMED na janela
 - **Notificacao ao gestor**: o WhatsApp configurado em

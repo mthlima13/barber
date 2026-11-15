@@ -304,7 +304,9 @@ function OutboxRow({ event }: { event: OutboxEvent }) {
       ? "bg-green-100 text-green-800"
       : event.status === "FAILED"
         ? "bg-red-100 text-red-700"
-        : "bg-amber-100 text-amber-800";
+        : event.status === "SKIPPED"
+          ? "bg-slate-200 text-slate-600"
+          : "bg-amber-100 text-amber-800";
   return (
     <li
       className={`flex flex-wrap items-center gap-2 rounded-lg border p-2 text-xs ${

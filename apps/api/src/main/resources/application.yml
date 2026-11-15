@@ -73,6 +73,9 @@ barberflow:
     app-secret: ${WHATSAPP_APP_SECRET:}
     verify-token: ${WHATSAPP_VERIFY_TOKEN:}
     api-version: ${WHATSAPP_API_VERSION:v23.0}
+    # Mensagem TEMPLATE por padrao (fora da janela de 24h a Meta so aceita
+    # template — lista dos nomes em docs/WHATSAPP.md); vazio = texto livre
+    template-language: ${WHATSAPP_TEMPLATE_LANGUAGE:pt_BR}
     # Ciclo de polling da outbox (worker) e backoff inicial de retry
     poll-interval-millis: ${WHATSAPP_POLL_INTERVAL_MILLIS:15000}
     first-backoff-seconds: ${WHATSAPP_FIRST_BACKOFF_SECONDS:30}

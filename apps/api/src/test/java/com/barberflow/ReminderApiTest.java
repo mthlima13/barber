@@ -84,6 +84,42 @@ class ReminderApiTest extends BaseIntegrationTest {
     assertThat(delivered.getMessageId()).startsWith("disabled-");
   }
 
+  @Test
+  void reminderIsSuppressedWhenAppointmentCancelledBeforeDelivery() throws Exception {
+    var booked =
+        callWithHeader(
+            "POST", "/api/v1/public/appointments", bookingBody("16:00"),
+            UUID.randomUUID().toString());
+    assertThat(booked.statusCode()).isEqualTo(201);
+    String appointmentId = extractId(booked.body());
+    String manageToken = extractJson(booked.body(), "manageToken");
+    String key = "appointment-reminder:" + appointmentId;
+
+    // Lembrete agendado na janela...
+    reminders.runOnce();
+    assertThat(outbox.findByIdempotencyKey(key)).isPresent();
+
+    // ...mas o cliente cancela ANTES da entrega
+    var cancelled =
+        callWith(manageToken, "POST",
+            "/api/v1/customer/appointments/" + appointmentId + "/cancel", null);
+    assertThat(cancelled.statusCode()).isEqualTo(200);
+
+    // Worker suprime o lembrete (SKIPPED com motivo) — nunca chega mensagem
+    // de reserva que nao existe mais; lote de 20 pode consumir ciclos
+    OutboxEventJpaEntity delivered = outbox.findByIdempotencyKey(key).orElseThrow();
+    for (int i = 0; i < 50; i++) {
+      delivered = outbox.findByIdempotencyKey(key).orElseThrow();
+      if (!"PENDING".equals(delivered.getStatus())) {
+        break;
+      }
+      worker.runOnce();
+    }
+    assertThat(delivered.getStatus()).isEqualTo("SKIPPED");
+    assertThat(delivered.getLastError()).contains("cancelada");
+    assertThat(delivered.getMessageId()).isNull();
+  }
+
   // ------------------------------------------------------------------ helpers
 
   private String bookingBody(String localTime) {
@@ -117,6 +153,13 @@ class ReminderApiTest extends BaseIntegrationTest {
   /** 0=domingo ... 6=sabado (DOW do PostgreSQL). */
   private static int weekdayOf(LocalDate date) {
     return date.getDayOfWeek().getValue() % 7;
+  }
+
+  /** Valor string de um campo JSON de nivel superior (corpos simples de teste). */
+  private static String extractJson(String json, String field) {
+    String key = "\"" + field + "\":\"";
+    int start = json.indexOf(key) + key.length();
+    return json.substring(start, json.indexOf('"', start));
   }
 
   /** POST com header extra (Idempotency-Key obrigatoria na criacao de reserva). */

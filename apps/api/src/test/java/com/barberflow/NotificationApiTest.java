@@ -134,6 +134,21 @@ class NotificationApiTest extends BaseIntegrationTest {
   }
 
   @Test
+  void confirmationEmitsConfirmedEventToCustomer() throws Exception {
+    var booked = book("15:00");
+    String appointmentId = extractId(booked.body());
+    var confirmed = callAuth("PATCH",
+        "/api/v1/dashboard/appointments/" + appointmentId + "/status",
+        "{\"status\":\"CONFIRMED\"}");
+    assertThat(confirmed.statusCode()).isEqualTo(200);
+
+    var outbox = callAuth("GET", "/api/v1/dashboard/outbox", null);
+
+    assertThat(outbox.body()).contains("\"eventType\":\"APPOINTMENT_CONFIRMED\"");
+    assertThat(outbox.body()).contains(appointmentId);
+  }
+
+  @Test
   void dashboardEndpointsRequireAuth() throws Exception {
     var outbox = call("GET", "/api/v1/dashboard/outbox", null);
     var audit = call("GET", "/api/v1/dashboard/audit", null);

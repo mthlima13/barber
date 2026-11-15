@@ -32,4 +32,14 @@ public class LoggingWhatsAppClient implements WhatsAppClient {
         message.length());
     return "disabled-" + UUID.randomUUID();
   }
+
+  @Override
+  public String sendTemplate(String phoneE164, String templateName, String language, String bodyText) {
+    log.info(
+        "WhatsApp desabilitado (enabled={}): template {} suprimido ({} caracteres)",
+        properties.enabled(),
+        templateName,
+        bodyText.length());
+    return "disabled-" + UUID.randomUUID();
+  }
 }

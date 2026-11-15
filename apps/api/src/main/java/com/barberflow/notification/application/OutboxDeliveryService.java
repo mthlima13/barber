@@ -58,4 +58,16 @@ public class OutboxDeliveryService {
           outbox.save(event);
         });
   }
+
+  /** Supressao: mensagem sem mais razao de existir (motivo fica na outbox). */
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void markSkipped(UUID eventId, String motivo) {
+    outbox
+        .findById(eventId)
+        .filter(event -> "PENDING".equals(event.getStatus()))
+        .ifPresent(event -> {
+          event.marcarSkipped(motivo);
+          outbox.save(event);
+        });
+  }
 }

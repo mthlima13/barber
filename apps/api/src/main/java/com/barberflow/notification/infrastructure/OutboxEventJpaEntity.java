@@ -163,4 +163,15 @@ public class OutboxEventJpaEntity {
     this.lastError = cause;
     this.nextAttemptAt = null;
   }
+
+  /**
+   * Supressao pelo worker: o evento perdeu a razao de existir entre o
+   * agendamento e a entrega (ex.: lembrete de reserva cancelada). Fica
+   * em SKIPPED com o motivo — nunca reenviado (findDue pega so PENDING).
+   */
+  public void marcarSkipped(String motivo) {
+    this.status = "SKIPPED";
+    this.lastError = motivo;
+    this.nextAttemptAt = null;
+  }
 }

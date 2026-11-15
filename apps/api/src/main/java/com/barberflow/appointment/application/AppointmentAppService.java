@@ -367,6 +367,20 @@ public class AppointmentAppService {
               "status", "CANCELLED"));
       waitlist.process(tenantId);
     }
+    // Confirmacao pelo gestor: o cliente era avisado da criacao, mas nunca
+    // do fecho — fala o cliente e reduz "sera que confirmaram?"
+    if ("CONFIRMED".equals(newStatus)) {
+      outbox.append(
+          tenantId,
+          OutboxEvents.APPOINTMENT_CONFIRMED,
+          null,
+          java.util.Map.of(
+              "appointmentId", entity.getId(),
+              "tenantId", tenantId,
+              "previousStatus", previousStatus,
+              "startsAt", entity.getStartsAt(),
+              "status", "CONFIRMED"));
+    }
     return toResponse(entity, null);
   }
 
