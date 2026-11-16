@@ -74,7 +74,7 @@ export default function ConfiguracoesPage() {
   return (
     <div>
       <h1 className="text-xl font-bold">Configuracoes</h1>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-zinc-400">
         Notificacoes de negocio para o WhatsApp da barbearia (entregues com o
         mesmo worker da fila de mensagens; cliente continua recebendo as
         mensagens dele normalmente).
@@ -85,40 +85,40 @@ export default function ConfiguracoesPage() {
           <label className="text-sm">
             <span className="font-medium">WhatsApp do gestor</span>
             <input
-              className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
               value={phone}
               onChange={(e) => setPhone(maskPhone(e.target.value))}
               placeholder="(11) 97000-0000"
               inputMode="tel"
             />
-            <span className="mt-1 block text-xs text-slate-500">
+            <span className="mt-1 block text-xs text-zinc-400">
               Deixe vazio para desligar as notificacoes.
             </span>
           </label>
           <button
             type="submit"
-            className="mt-4 rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-40"
+            className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-40"
             disabled={busy}
           >
             {busy ? "Salvando..." : "Salvar"}
           </button>
           {message && (
-            <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-800">
+            <p className="mt-3 rounded-lg border border-emerald-900 bg-emerald-950/40 p-3 text-sm text-emerald-300">
               {message}
             </p>
           )}
           {error && (
-            <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+            <p className="mt-3 rounded-lg border border-red-900 bg-red-950/60 p-3 text-sm text-red-400" role="alert">
               {error}
             </p>
           )}
-          <p className="mt-4 text-xs text-slate-500">
+          <p className="mt-4 text-xs text-zinc-400">
             Voce sera avisado quando uma reserva nova entrar (inclusive pela
             lista de espera) e quando alguem se inscrever na fila.
           </p>
         </form>
       ) : (
-        <p className="mt-6 text-sm text-slate-500">Carregando...</p>
+        <p className="mt-6 text-sm text-zinc-400">Carregando...</p>
       )}
     </div>
   );

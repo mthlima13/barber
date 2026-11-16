@@ -113,20 +113,20 @@ export default function ServicosPage() {
       <h1 className="text-xl font-bold">Servicos</h1>
 
       {error && (
-        <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <p className="mt-4 rounded-lg border border-red-900 bg-red-950/60 p-3 text-sm text-red-400" role="alert">
           {error}
         </p>
       )}
 
       <form
-        className="mt-4 grid gap-2 rounded-lg bg-white p-4 shadow sm:grid-cols-4"
+        className="mt-4 grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:grid-cols-4"
         onSubmit={onCreate}
       >
         <input
           required
           maxLength={120}
           placeholder="Nome do servico"
-          className="rounded-lg border border-slate-300 p-2 text-sm sm:col-span-2"
+          className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100 sm:col-span-2"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -136,7 +136,7 @@ export default function ServicosPage() {
           min={1}
           max={480}
           placeholder="Duracao (min)"
-          className="rounded-lg border border-slate-300 p-2 text-sm"
+          className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
         />
@@ -145,20 +145,20 @@ export default function ServicosPage() {
           type="text"
           inputMode="decimal"
           placeholder="Preco (R$)"
-          className="rounded-lg border border-slate-300 p-2 text-sm"
+          className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
           value={priceReais}
           onChange={(e) => setPriceReais(e.target.value)}
         />
         <input
           maxLength={500}
           placeholder="Descricao (opcional)"
-          className="rounded-lg border border-slate-300 p-2 text-sm sm:col-span-3"
+          className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100 sm:col-span-3"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
         <button
           type="submit"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+          className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40"
           disabled={busy}
         >
           Criar servico
@@ -166,12 +166,12 @@ export default function ServicosPage() {
       </form>
 
       {items === null ? (
-        <p className="mt-6 text-sm text-slate-500">Carregando...</p>
+        <p className="mt-6 text-sm text-zinc-400">Carregando...</p>
       ) : (
         <ul className="mt-4 grid gap-2">
           {items.map((service) =>
             editing === service.id ? (
-              <li key={service.id} className="rounded-lg bg-white p-4 shadow">
+              <li key={service.id} className="rounded-lg bg-zinc-900 p-4">
                 <EditServiceForm
                   service={service}
                   onDone={(message) => {
@@ -184,18 +184,18 @@ export default function ServicosPage() {
             ) : (
               <li
                 key={service.id}
-                className="flex flex-wrap items-center gap-3 rounded-lg bg-white p-4 shadow"
+                className="flex flex-wrap items-center gap-3 rounded-lg bg-zinc-900 p-4"
               >
                 <div className="min-w-48">
                   <p className="font-semibold">
                     {service.name}
                     {!service.active && (
-                      <span className="ml-2 rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-600">
+                      <span className="ml-2 rounded bg-zinc-700 px-2 py-0.5 text-xs text-zinc-300">
                         inativo
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-zinc-400">
                     {service.durationMinutes} min - {price(service.priceCents)}
                     {service.description ? ` - ${service.description}` : ""}
                   </p>
@@ -203,7 +203,7 @@ export default function ServicosPage() {
                 <span className="ml-auto flex gap-2">
                   <button
                     type="button"
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-40"
+                    className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
                     disabled={busy}
                     onClick={() => setEditing(service.id)}
                   >
@@ -211,7 +211,7 @@ export default function ServicosPage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-40"
+                    className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
                     disabled={busy}
                     onClick={() => void onToggleActive(service)}
                   >
@@ -219,7 +219,7 @@ export default function ServicosPage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-40"
+                    className="rounded-lg border border-red-900 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950/60 disabled:opacity-40"
                     disabled={busy}
                     onClick={() => void onDelete(service)}
                   >
@@ -279,7 +279,7 @@ function EditServiceForm({
       <input
         required
         maxLength={120}
-        className="rounded-lg border border-slate-300 p-2 text-sm sm:col-span-2"
+        className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100 sm:col-span-2"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
@@ -288,7 +288,7 @@ function EditServiceForm({
         type="number"
         min={1}
         max={480}
-        className="rounded-lg border border-slate-300 p-2 text-sm"
+        className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
         value={duration}
         onChange={(e) => setDuration(e.target.value)}
       />
@@ -296,20 +296,20 @@ function EditServiceForm({
         required
         type="text"
         inputMode="decimal"
-        className="rounded-lg border border-slate-300 p-2 text-sm"
+        className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
         value={priceReais}
         onChange={(e) => setPriceReais(e.target.value)}
       />
       <input
         maxLength={500}
         placeholder="Descricao"
-        className="rounded-lg border border-slate-300 p-2 text-sm sm:col-span-3"
+        className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100 sm:col-span-3"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
       <button
         type="submit"
-        className="rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-40"
+        className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40"
         disabled={busy}
       >
         Salvar

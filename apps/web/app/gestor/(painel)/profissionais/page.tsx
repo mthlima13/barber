@@ -125,26 +125,26 @@ export default function ProfissionaisPage() {
       <h1 className="text-xl font-bold">Profissionais</h1>
 
       {error && (
-        <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <p className="mt-4 rounded-lg border border-red-900 bg-red-950/60 p-3 text-sm text-red-400" role="alert">
           {error}
         </p>
       )}
 
       <form
-        className="mt-4 flex gap-2 rounded-lg bg-white p-4 shadow"
+        className="mt-4 flex gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-4"
         onSubmit={onCreate}
       >
         <input
           required
           maxLength={120}
           placeholder="Nome exibido (ex.: Joao - Barbeiro)"
-          className="w-full rounded-lg border border-slate-300 p-2 text-sm"
+          className="w-full rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         <button
           type="submit"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+          className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40"
           disabled={busy}
         >
           Criar
@@ -152,11 +152,11 @@ export default function ProfissionaisPage() {
       </form>
 
       {items === null ? (
-        <p className="mt-6 text-sm text-slate-500">Carregando...</p>
+        <p className="mt-6 text-sm text-zinc-400">Carregando...</p>
       ) : (
         <ul className="mt-4 grid gap-2">
           {items.map((barber) => (
-            <li key={barber.id} className="rounded-lg bg-white p-4 shadow">
+            <li key={barber.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
               <div className="flex flex-wrap items-center gap-3">
                 <div>
                   <p className="font-semibold">
@@ -171,7 +171,7 @@ export default function ProfissionaisPage() {
                 <span className="ml-auto flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-40"
+                    className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
                     disabled={busy}
                     onClick={() => void onRename(barber)}
                   >
@@ -181,7 +181,7 @@ export default function ProfissionaisPage() {
                     type="button"
                     className={`rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-40 ${
                       hoursFor === barber.id
-                        ? "bg-slate-200 text-slate-800"
+                        ? "bg-zinc-700 text-zinc-100"
                         : "border border-slate-300 hover:bg-slate-50"
                     }`}
                     disabled={busy}
@@ -193,7 +193,7 @@ export default function ProfissionaisPage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-40"
+                    className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
                     disabled={busy}
                     onClick={() => void onToggleActive(barber)}
                   >
@@ -204,7 +204,7 @@ export default function ProfissionaisPage() {
                       type="button"
                       className={`rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-40 ${
                         credentialsFor === barber.id
-                          ? "bg-slate-200 text-slate-800"
+                          ? "bg-zinc-700 text-zinc-100"
                           : "border border-slate-300 hover:bg-slate-50"
                       }`}
                       disabled={busy}
@@ -218,13 +218,13 @@ export default function ProfissionaisPage() {
                     </button>
                   )}
                   {barber.userId !== null && (
-                    <span className="rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                    <span className="rounded bg-emerald-400/15 px-2 py-1 text-xs font-medium text-emerald-300">
                       acesso criado
                     </span>
                   )}
                   <button
                     type="button"
-                    className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-40"
+                    className="rounded-lg border border-red-900 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950/60 disabled:opacity-40"
                     disabled={busy}
                     onClick={() => void onDelete(barber)}
                   >
@@ -318,7 +318,7 @@ function HoursEditor({
   }
 
   return (
-    <form className="mt-4 border-t border-slate-200 pt-4" onSubmit={submit}>
+    <form className="mt-4 border-t border-zinc-800 pt-4" onSubmit={submit}>
       <h3 className="text-sm font-semibold">Expediente semanal</h3>
       <div className="mt-2 grid gap-1">
         {WEEKDAYS.map((day) => (
@@ -339,7 +339,7 @@ function HoursEditor({
             <span className="w-20">{day.label}</span>
             <input
               type="time"
-              className="rounded-lg border border-slate-300 p-1.5 text-sm"
+              className="rounded-lg border border-zinc-700 bg-zinc-900 p-1.5 text-sm text-zinc-100"
               value={rows[day.value].start}
               disabled={!rows[day.value].on}
               onChange={(e) =>
@@ -349,10 +349,10 @@ function HoursEditor({
                 }))
               }
             />
-            <span className="text-slate-500">as</span>
+            <span className="text-zinc-400">as</span>
             <input
               type="time"
-              className="rounded-lg border border-slate-300 p-1.5 text-sm"
+              className="rounded-lg border border-zinc-700 bg-zinc-900 p-1.5 text-sm text-zinc-100"
               value={rows[day.value].end}
               disabled={!rows[day.value].on}
               onChange={(e) =>
@@ -367,7 +367,7 @@ function HoursEditor({
       </div>
       <button
         type="submit"
-        className="mt-3 rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-40"
+        className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-40"
         disabled={busy}
       >
         Salvar expediente
@@ -410,14 +410,14 @@ function CredentialsEditor({
 
   return (
     <form
-      className="mt-3 flex flex-wrap gap-2 rounded-lg bg-slate-50 p-3"
+      className="mt-3 flex flex-wrap gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3"
       onSubmit={onSubmit}
     >
       <input
         required
         type="email"
         placeholder="email do profissional"
-        className="w-56 rounded-lg border border-slate-300 p-2 text-sm"
+        className="w-56 rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
@@ -426,13 +426,13 @@ function CredentialsEditor({
         type="password"
         minLength={8}
         placeholder="senha (min. 8 caracteres)"
-        className="w-56 rounded-lg border border-slate-300 p-2 text-sm"
+        className="w-56 rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
       <button
         type="submit"
-        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+        className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40"
         disabled={busy}
       >
         Criar acesso

@@ -87,51 +87,51 @@ export default function FilaPage() {
         <h1 className="text-xl font-bold">Fila de espera</h1>
         <button
           type="button"
-          className="ml-auto rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+          className="ml-auto rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40"
           disabled={busy}
           onClick={() => void onProcess()}
         >
           {busy ? "Processando..." : "Processar fila"}
         </button>
       </div>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-zinc-400">
         Expira ofertas vencidas (5 min) e oferece horarios livres ao primeiro
         da fila, em ordem de inscricao.
       </p>
 
       {error && (
-        <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <p className="mt-4 rounded-lg border border-red-900 bg-red-950/60 p-3 text-sm text-red-400" role="alert">
           {error}
         </p>
       )}
 
       {items === null ? (
-        <p className="mt-6 text-sm text-slate-500">Carregando...</p>
+        <p className="mt-6 text-sm text-zinc-400">Carregando...</p>
       ) : items.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-500">Fila vazia.</p>
+        <p className="mt-6 text-sm text-zinc-400">Fila vazia.</p>
       ) : (
         <ul className="mt-4 grid gap-2">
           {items.map((entry) => (
             <li
               key={entry.id}
-              className="flex flex-wrap items-center gap-3 rounded-lg bg-white p-4 shadow"
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4"
             >
               <div className="min-w-56">
                 <p className="font-semibold">{entry.customerName}</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-zinc-400">
                   {entry.customerPhone ?? "sem telefone"}
                   {" - "}
                   {serviceById.get(entry.serviceId)?.name ?? "Servico"} -{" "}
                   {barberById.get(entry.barberId)?.displayName ?? "Profissional"}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-zinc-400">
                   Desejado: {slotTime(entry.desiredStartAt, "America/Sao_Paulo")} -{" "}
                   {slotTime(entry.desiredEndAt, "America/Sao_Paulo")}
                   {" - "}
                   inscrito em {dateTime(entry.createdAt, "America/Sao_Paulo")}
                 </p>
                 {entry.offer && (
-                  <p className="text-xs text-blue-700">
+                  <p className="text-xs text-sky-300">
                     Ofertado: {slotTime(entry.offer.startsAt, "America/Sao_Paulo")} -{" "}
                     {slotTime(entry.offer.endsAt, "America/Sao_Paulo")}
                     {entry.offer.expiresAt &&
@@ -142,7 +142,7 @@ export default function FilaPage() {
                   </p>
                 )}
                 {entry.expiresAt && (
-                  <p className="text-xs text-amber-700">
+                  <p className="text-xs text-amber-300">
                     Oferta expira em {dateTime(entry.expiresAt, "America/Sao_Paulo")}
                   </p>
                 )}
@@ -150,12 +150,12 @@ export default function FilaPage() {
               <span
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   entry.status === "WAITING"
-                    ? "bg-amber-100 text-amber-800"
+                    ? "bg-amber-400/15 text-amber-300"
                     : entry.status === "OFFERED"
-                      ? "bg-blue-100 text-blue-800"
+                      ? "bg-sky-400/15 text-sky-300"
                       : entry.status === "FULFILLED"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-slate-200 text-slate-700"
+                        ? "bg-emerald-400/15 text-emerald-300"
+                        : "bg-zinc-700 text-zinc-200"
                 }`}
               >
                 {entryStatusLabel[entry.status] ?? entry.status}

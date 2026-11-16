@@ -19,29 +19,29 @@ const ACTIONS: Record<string, { status: string; label: string; style: string }[]
       {
         status: "CONFIRMED",
         label: "Confirmar",
-        style: "bg-green-700 hover:bg-green-600 text-white",
+        style: "bg-emerald-600 hover:bg-emerald-500 text-white",
       },
       {
         status: "CANCELLED",
         label: "Cancelar",
-        style: "border border-red-300 text-red-700 hover:bg-red-50",
+        style: "border border-red-900 text-red-400 hover:bg-red-950/60",
       },
     ],
     CONFIRMED: [
       {
         status: "COMPLETED",
         label: "Concluir",
-        style: "bg-green-700 hover:bg-green-600 text-white",
+        style: "bg-emerald-600 hover:bg-emerald-500 text-white",
       },
       {
         status: "NO_SHOW",
         label: "Nao compareceu",
-        style: "border border-slate-300 hover:bg-slate-50",
+        style: "border border-zinc-700 text-zinc-300 hover:bg-zinc-800",
       },
       {
         status: "CANCELLED",
         label: "Cancelar",
-        style: "border border-red-300 text-red-700 hover:bg-red-50",
+        style: "border border-red-900 text-red-400 hover:bg-red-950/60",
       },
     ],
   };
@@ -121,21 +121,21 @@ export default function MinhaAgendaPage() {
           <span className="mr-2 font-medium">Data</span>
           <input
             type="date"
-            className="rounded-lg border border-slate-300 p-2 text-sm"
+            className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
         </label>
       </div>
       {error && (
-        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <p className="mt-3 rounded-lg border border-red-900 bg-red-950/60 p-3 text-sm text-red-400">
           {error}
         </p>
       )}
       <div className="mt-4 space-y-3">
-        {items === null && <p className="text-sm text-slate-500">Carregando...</p>}
+        {items === null && <p className="text-sm text-zinc-400">Carregando...</p>}
         {items?.length === 0 && (
-          <p className="text-sm text-slate-500">Sem reservas nesta data.</p>
+          <p className="text-sm text-zinc-400">Sem reservas nesta data.</p>
         )}
         {items?.map((item) => {
           const actions = ACTIONS[item.status] ?? [];
@@ -143,17 +143,17 @@ export default function MinhaAgendaPage() {
           return (
             <div
               key={item.id}
-              className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-slate-800">
+                <span className="text-sm font-semibold text-zinc-100">
                   {dateTime(item.startsAt, "America/Sao_Paulo")}
                 </span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                <span className="rounded-full bg-zinc-700 px-2 py-0.5 text-xs font-medium text-zinc-200">
                   {statusLabel(item.status)}
                 </span>
                 {service && (
-                  <span className="text-sm text-slate-600">
+                  <span className="text-sm text-zinc-400">
                     {service.name} - {price(service.priceCents)}
                   </span>
                 )}
