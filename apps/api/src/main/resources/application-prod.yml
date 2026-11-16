@@ -18,6 +18,9 @@ barberflow:
     # SEM fallback: o segredo deve vir do secret manager (>= 32 bytes)
     jwt-secret: ${AUTH_JWT_SECRET}
     jwt-ttl-minutes: ${AUTH_JWT_TTL_MINUTES:720}
+  cors:
+    # SEM fallback: dominio real do web publico (fail-fast)
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
   whatsapp:
     # O operador decide explicitamente (credenciais da Meta obrigatorias
     # quando true: phone-number-id, access-token, app-secret, verify-token)

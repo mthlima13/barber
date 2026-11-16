@@ -3,6 +3,8 @@ package com.barberflow.shared.infrastructure;
 import com.barberflow.auth.infrastructure.JwtAuthenticationFilter;
 import com.barberflow.auth.infrastructure.JwtService;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -15,6 +17,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * Seguranca do MVP (spec, secoes 10 e 11): sessoes sem estado via token Bearer
@@ -31,10 +36,35 @@ public class SecurityConfig {
     return new BCryptPasswordEncoder();
   }
 
+  /**
+   * CORS: o web (Next.js) consome a API de origem propria no browser —
+   * sem isso, o fetch publico falha ("Failed to fetch"). Origens
+   * autorizadas por variavel (dev: http://localhost:3000; prod: dominio
+   * real). Webhook da Meta e server-to-server, sem impacto.
+   */
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService)
+  CorsConfigurationSource barberflowCorsConfigurationSource(
+      @Value("${barberflow.cors.allowed-origins:http://localhost:3000}") String allowedOrigins) {
+    var config = new CorsConfiguration();
+    config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+    config.setAllowedMethods(
+        List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+    config.setAllowedHeaders(List.of("*"));
+    config.setMaxAge(3600L);
+    var source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
+    return source;
+  }
+
+  @Bean
+  SecurityFilterChain securityFilterChain(
+      HttpSecurity http,
+      JwtService jwtService,
+      @org.springframework.beans.factory.annotation.Qualifier("barberflowCorsConfigurationSource")
+      CorsConfigurationSource corsSource)
       throws Exception {
     return http
+        .cors(cors -> cors.configurationSource(corsSource))
         .authorizeHttpRequests(
             auth ->
                 auth

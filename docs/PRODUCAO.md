@@ -29,6 +29,7 @@ O perfil `prod` (`application-prod.yml`) **falha a subida** se algo essencial fa
 | `PRIVACY_RETENTION_ENABLED` | padrão `true` no prod (retenção LGPD) |
 | `REMINDERS_ENABLED` | padrão `true` no prod (lembrete 24h via outbox; `REMINDERS_WINDOW_HOURS` ajusta a janela) |
 | `APPOINTMENT_EXPIRY_ENABLED` | padrão `true` no prod (reserva PENDING a mais de `APPOINTMENT_EXPIRY_PENDING_TTL_HOURS` — padrão 24 — é cancelada pelo job, liberando o slot e a lista de espera) |
+| `CORS_ALLOWED_ORIGINS` | **sem default no prod** — origem(s) do web público autorizadas a chamar a API (múltiplas separadas por vírgula) |
 | `NEXT_PUBLIC_API_BASE_URL` (web) | URL pública da API |
 | `NEXT_PUBLIC_DEFAULT_SLUG` (web) | slug da barbearia piloto |
 

@@ -64,6 +64,10 @@ barberflow:
     public-read-per-minute: ${RATE_LIMIT_PUBLIC_READ_PER_MINUTE:60}
     public-write-per-minute: ${RATE_LIMIT_PUBLIC_WRITE_PER_MINUTE:20}
     auth-per-minute: ${RATE_LIMIT_AUTH_PER_MINUTE:10}
+  cors:
+    # Origens do browser autorizadas a chamar a API (web publica);
+    # multiplas separadas por virgula
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   whatsapp:
     # Cloud API (spec, secao 12): habilitado apenas com credenciais reais;
     # desabilitado, o worker marca eventos SENT via client de log (local)
