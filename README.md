@@ -1,50 +1,99 @@
 # BarberFlow
 
-Sistema web de agendamentos para barbearia com lista de espera e notificacoes
-por WhatsApp. Ver especificacao completa em [`BARBERFLOW_ARQUITETURA.md`](BARBERFLOW_ARQUITETURA.md).
+**Sistema completo de agendamento para barbearia**: reserva online com
+disponibilidade calculada no servidor, lista de espera que recupera
+horários perdidos, link seguro de gerenciamento sem conta e notificações
+por **WhatsApp (Cloud API)** — tudo com LGPD desde a primeira linha.
 
-## Funcionalidades
+[![CI](https://github.com/mthlima13/barber/actions/workflows/ci.yml/badge.svg)](https://github.com/mthlima13/barber/actions/workflows/ci.yml)
+![Java 21](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-brightgreen)
+![Next.js](https://img.shields.io/badge/Next.js-15-black)
+![Testes](https://img.shields.io/badge/testes%20de%20integra%C3%A7%C3%A3o-98-green)
 
-- **Pagina publica de reserva** (`/b/{slug}`): servico -> profissional ->
-  data/horario (disponibilidade calculada no servidor) -> dados do cliente;
-  telefone com mascara BR normalizado para E.164; resumo da reserva antes de
-  confirmar; quando a data esta cheia, formulario **"Avise-me"** inscreve o
-  cliente na lista de espera por horario especifico
-- **Gerenciamento sem conta** (`/reservas/{id}?t=...`): o cliente consulta,
-  remarca e cancela pelo link seguro (token unico; no banco so existe o hash)
-- **Painel do gestor** (`/gestor`): agenda do dia com acoes de status,
-  CRUD de servicos/profissionais, expediente e excecoes, fila de espera com
-  cliente resolvido (nome/telefone e slot ofertado), auditoria e outbox
-- **Papel BARBER**: o gestor cria a conta do profissional, que ve e altera
-  APENAS a propria agenda (`/gestor/minha-agenda`); reserva de colega
-  responde 404 e o CRUD do painel fica 403
-- **Lista de espera** (spec 9.2): oferta "uma pessoa por vez" com hold
-  transacional (a vaga em hold nao e anunciada como livre), aceite por
-  token com revalidacao do slot e expiracao de 5 minutos que devolve a
-  vaga ao proximo da fila
-- **WhatsApp (Cloud API)**: entrega via outbox (worker com retry/backoff),
-  webhook da Meta com assinatura HMAC validada e dedupe; mensagem
-  **template** por padrao (nomes derivados do evento, lista em
-  `docs/WHATSAPP.md` — fora da janela de 24h a Meta so aceita template).
-  Enquanto `WHATSAPP_ENABLED=false`, envio simulado em log
-- **Lembrete 24h**: job periodico idempotente (chave unica por reserva na
-  outbox) agenda o lembrete das reservas PENDING/CONFIRMED na janela
-- **Notificacao ao gestor**: o WhatsApp configurado em
-  `/gestor/configuracoes` recebe reserva nova (inclusive via fila),
-  inscricao na lista de espera, cancelamento e remarcacao feitos pelo
-  cliente, pela mesma outbox; vazio desliga
-- **Expiracao de PENDING**: job periodico cancela a reserva pendente de
-  confirmacao alem do prazo (`APPOINTMENT_EXPIRY_PENDING_TTL_HOURS`,
-  padrao 24h), libera o slot, oferta a lista de espera e notifica o
-  cliente; desligado por padrao no dev
-- **LGPD**: consentimento obrigatorio na reserva e na fila, politica em
-  `/privacidade`, acesso/exclusao do titular (anonimizacao irreversivel) e
-  retencao automatica configuravel
-- **Observabilidade**: metricas de negocio no Prometheus (reservas por
-  resultado, funil da fila, falhas de entrega, idade da outbox) e p95/5xx
-  do `http.server.requests`
+<!-- Screenshots: capture conforme docs/DEMO.md e descomente o bloco.
+<p align="center">
+  <img src="docs/img/reserva-publica.png" width="280" alt="Reserva publica" />
+  <img src="docs/img/link-seguro.png" width="280" alt="Link seguro" />
+  <img src="docs/img/painel-gestor.png" width="280" alt="Painel do gestor" />
+</p>
+-->
 
-## Endpoints principais
+```mermaid
+flowchart LR
+    subgraph cliente["Cliente"]
+        W["Web publico<br/>(Next.js 15)"]
+        L["Link seguro<br/>(sem conta)"]
+    end
+    subgraph api["API (Spring Boot 4 — monolito modular)"]
+        B["booking<br/>reservas + disponibilidade"]
+        Q["waitlist<br/>fila com hold transacional"]
+        N["notification<br/>outbox + workers"]
+        G["dashboard<br/>gestor + papel BARBER"]
+    end
+    DB[("PostgreSQL<br/>Flyway")]
+    META["WhatsApp<br/>Cloud API"]
+    PROM["Prometheus<br/>/actuator/prometheus"]
+
+    W -->|"/api/v1/public"| B
+    W -->|avise-me| Q
+    L -->|"/api/v1/customer"| B
+    L -->|aceite de oferta| Q
+    G -->|"/api/v1/dashboard"| B
+    B --> DB
+    Q --> DB
+    G --> DB
+    N --> DB
+    B -->|"evento na MESMA transacao"| N
+    Q -->|"evento na MESMA transacao"| N
+    N -->|"worker + retry/backoff"| META
+    META -->|"webhook HMAC"| N
+    api --> PROM
+    J["jobs: lembrete 24h,<br/>expiracao de PENDING"] -.-> N
+```
+
+## Destaques técnicos (com o código)
+
+| Desafio | Solução |
+|---|---|
+| Notificação nunca perde a reserva | **Outbox pattern**: evento gravado na MESMA transação do negócio, worker com retry/backoff até FAILED (`OutboxWorker.java`) |
+| Replay do POST não duplica reserva | Idempotência por `Idempotency-Key` com unique no banco (`AppointmentAppService`) |
+| WhatsApp fora da janela de 24h | Envio por **template da Meta** (corpo `{{1}}`, nomes derivados do evento — `docs/WHATSAPP.md`) |
+| Lembrete nunca chega duas vezes | Job idempotente com chave única por reserva na outbox (`ReminderWorker`) |
+| Vaga da fila não é vendida duas vezes | **Hold transacional**: oferta PENDING reserva o intervalo; aceite revalida o slot (`SlotValidator`, `WaitlistService`) |
+| Cliente recebe lembrete de reserva que cancelou? | Worker **suprime** mensagens obsoletas → status `SKIPPED` com motivo no painel (`OutboxWorker`) |
+| Brute force em rotas com token no caminho | Rate limit **antes do Spring Security**, por IP com janela deslizante (`RateLimitConfig`) |
+| Privacidade real | Consentimento na coleta, acesso/exclusão do titular, anonimização irreversível, política versionada (`PrivacyService`) |
+| Confiança de refatoração | **98 testes de integração** em PostgreSQL real (Testcontainers singleton + Flyway), CI no GitHub Actions |
+
+<details>
+<summary><strong>Funcionalidades</strong></summary>
+
+- **Reserva pública** (`/b/{slug}`): serviço → profissional → horário
+  (disponibilidade calculada no servidor) → dados; telefone com máscara BR
+  normalizado para E.164; resumo antes de confirmar
+- **"Avise-me"**: data cheia inscreve na lista de espera por horário
+  específico; vaga aberta é ofertada **uma pessoa por vez** (hold de 5 min,
+  expira e devolve ao próximo)
+- **Link seguro** (`/reservas/{id}?t=...`): consulta, remarca e cancela sem
+  conta; token único, no banco só o hash
+- **Painel do gestor** (`/gestor`): agenda do dia com cartões-resumo
+  (receita prevista, fila, outbox), CRUD de catálogo, fila com cliente
+  resolvido, notificações (outbox), auditoria
+- **Papel BARBER**: profissional vê e altera **apenas a própria agenda**;
+  reserva de colega responde 404 e o CRUD do painel, 403
+- **Lembrete 24h** e **expiração de PENDING** (job cancela pendente fora do
+  prazo, libera o slot e oferta a fila)
+- **Notificação ao gestor**: reserva nova, inscrição na fila, cancelamento
+  e remarcação — pelo WhatsApp configurado no painel
+- **LGPD**: política em `/privacidade`, exclusão do titular pelo link seguro
+- **Observabilidade**: métricas de negócio no Prometheus (funil da fila,
+  reservas por resultado, saúde da outbox) + p95/5xx do Spring
+
+</details>
+
+<details>
+<summary><strong>Endpoints principais</strong></summary>
 
 Publicos (rate limit por IP):
 - `GET /api/v1/public/barbershops/{slug}` — dados da barbearia
@@ -73,47 +122,18 @@ Webhooks e operacao:
 - `GET|POST /api/v1/webhooks/whatsapp` — challenge e eventos da Meta (HMAC)
 - `GET /actuator/health`, `GET /actuator/prometheus`
 
-## Estrutura
+</details>
 
-```
-barberflow/
-├── apps/
-│   ├── api/        # Backend: Spring Boot 4.1 (monolito modular)
-│   └── web/        # Frontend: Next.js (App Router, TypeScript, Tailwind)
-├── infra/
-│   └── compose.yaml # Docker Compose de desenvolvimento (PostgreSQL + API + Web)
-└── BARBERFLOW_ARQUITETURA.md
-```
-
-## Desenvolvimento
-
-### Com Docker Compose (recomendado)
+## Rodar em 5 minutos
 
 ```bash
 docker compose -f infra/compose.yaml up --build
 ```
 
-- API: http://localhost:8081 (health: `GET /actuator/health`; host 8081 porque a 8080 ja esta em uso por outro projeto)
 - Web: http://localhost:3000
-- PostgreSQL: localhost:5432 (db `barberflow`, user `barberflow`)
+- API: http://localhost:8081 (health: `GET /actuator/health`)
 
-### Web sem Docker
-
-Requer Node.js 20+:
-
-```bash
-cd apps/web
-npm install
-npm run dev   # http://localhost:3000
-```
-
-Configuracao: `NEXT_PUBLIC_API_BASE_URL` (URL da API consumida pelo browser)
-e `NEXT_PUBLIC_DEFAULT_SLUG` (barbearia padrao do MVP). Ver `.env.example`.
-
-### Bootstrap inicial
-
-A barbearia (tenant `barbearia-piloto`) e criada no primeiro bootstrap do
-gestor (uma vez por base):
+Crie o primeiro gestor (cria a barbearia piloto):
 
 ```bash
 curl -X POST http://localhost:8081/api/v1/auth/bootstrap \
@@ -121,53 +141,55 @@ curl -X POST http://localhost:8081/api/v1/auth/bootstrap \
   -d '{"name":"Gestor","email":"gestor@barbearia.local","password":"senha-segura-123"}'
 ```
 
-Depois cadastre servicos e profissionais no dashboard e libere o expediente.
-
-### API sem Docker
-
-Requer Java 21+ e Maven; PostgreSQL local na porta 5432:
-
-```bash
-cd apps/api
-mvn spring-boot:run
-```
-
-Variaveis: ver `.env.example` (`DATABASE_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`).
+No painel (`/gestor`), cadastre serviços e profissionais, libere o
+expediente — e o fluxo completo está de pé. Desenvolvimento sem Docker e
+demais variáveis: `.env.example`.
 
 ### Testes
 
 ```bash
 cd apps/api
-mvn verify   # 91 testes de integracao; Testcontainers; requer Docker em execucao
+mvn verify   # 98 testes de integracao (Testcontainers; requer Docker)
 ```
 
-### Observabilidade
+### Métricas
 
-`GET /actuator/prometheus` expoe, alem das metricas padrao:
+`GET /actuator/prometheus` expõe, além das padrão do Spring:
 
-- `barberflow_appointments_total{outcome="created|cancelled|conflict"}` — reservas
-- `barberflow_waitlist_offers_total`, `barberflow_waitlist_offers_accepted_total`,
-  `barberflow_waitlist_offers_expired_total` — funil da lista de espera
-- `barberflow_whatsapp_delivery_failed_total` — entregas esgotadas
-- `barberflow_outbox_pending` e `barberflow_outbox_oldest_pending_seconds` —
-  saude da outbox (tamanho e idade do evento mais antigo)
-- p95 e 5xx de `http.server.requests` (padrao do Spring)
+- `barberflow_appointments_total{outcome="created|cancelled|conflict"}`
+- `barberflow_waitlist_offers_total`, `..._accepted_total`, `..._expired_total`
+- `barberflow_whatsapp_delivery_failed_total`
+- `barberflow_outbox_pending`, `barberflow_outbox_oldest_pending_seconds`
+
+## Estrutura
+
+```
+barberflow/
+├── apps/
+│   ├── api/            # Spring Boot 4 (monolito modular: booking, waitlist,
+│   │                   # notification, availability, auth, audit, privacy...)
+│   └── web/            # Next.js 15 (App Router, TypeScript, Tailwind)
+├── infra/
+│   └── compose.yaml    # Compose de desenvolvimento (PostgreSQL + API + Web)
+├── docs/               # PRODUCAO.md, PILOTO.md, WHATSAPP.md
+└── scripts/            # smoke.sh e e2e.sh (verificacao pos-deploy)
+```
 
 ## Roadmap
 
-- [x] Fase 0 — Fundacao: esqueleto da API, Flyway, healthchecks, Dockerfile/Compose
-- [x] Fase 1 — Cadastro e agenda (CRUD barbeiros/servicos, motor de disponibilidade)
-- [x] Fase 2 — Agendamentos publicos (+ catalogo publico, rate limit, idempotencia, outbox/auditoria)
-- [x] Fase 3 — Lista de espera (hold transacional, ofertas com expiracao)
-- [x] Web — Publico de agendamento + link seguro de gerenciamento (Next.js)
-- [x] Fase 4 — WhatsApp (Cloud API): worker da outbox e webhook da Meta (entrega real depende de credenciais)
-- [x] LGPD — Consentimento na coleta, acesso/exclusao do titular via link seguro, politica de privacidade e retencao configuravel
-- [x] Fase 5 (preparacao) — Headers de seguranca (CSP/HSTS) na API e no web, perfil `prod` fail-fast, smoke test e checklist de producao (`docs/PRODUCAO.md`); deploy fica para quando houver infra
-- [x] Plano do piloto — roteiro de observacao, hipoteses com criterio de sucesso e template de feedback (`docs/PILOTO.md`)
-- [x] Papel BARBER — acesso restrito a propria agenda, com login criado pelo gestor
-- [x] Metricas de negocio — contadores/gauges no Prometheus e checklist de observabilidade
-- [x] Lembrete 24h — job idempotente via outbox (`REMINDERS_ENABLED`)
-- [x] Expiracao de PENDING — job libera o slot e oferta a lista de espera (`APPOINTMENT_EXPIRY_ENABLED`)
-- [x] CI (GitHub Actions: mvn verify com Testcontainers + next build) e teste E2E do fluxo publico (`scripts/e2e.sh`)
-- [x] Web publico completo — avise-me (lista de espera) na pagina de reserva e telefone E.164
-- [ ] Fase 5 — Producao piloto (deploy real, backups, observabilidade em operacao, feedback da barbearia)
+- [x] Fase 0-2 — Fundacao, cadastro/agenda, agendamentos publicos (idempotencia, rate limit, outbox)
+- [x] Fase 3 — Lista de espera com hold transacional e ofertas com expiracao
+- [x] Web — Reserva publica, avise-me e link seguro de gerenciamento
+- [x] Fase 4 — WhatsApp (Cloud API): worker, webhook da Meta e templates
+- [x] LGPD — Consentimento, acesso/exclusao do titular, retencao configuravel
+- [x] Fase 5 (preparacao) — Headers de seguranca, perfil `prod` fail-fast, smoke/E2E, CI
+- [x] Lembrete 24h, expiracao de PENDING e notificacao completa ao gestor
+- [x] Piloto documentado — `docs/PILOTO.md` + template de feedback de produto
+- [ ] Deploy real (quando houver infra) — checklist pronto em `docs/PRODUCAO.md`
+
+## Docs
+
+- [`BARBERFLOW_ARQUITETURA.md`](BARBERFLOW_ARQUITETURA.md) — especificacao completa (o guia seguido de ponta a ponta)
+- [`docs/PRODUCAO.md`](docs/PRODUCAO.md) — checklist de producao e pos-deploy
+- [`docs/WHATSAPP.md`](docs/WHATSAPP.md) — credenciais e templates da Meta
+- [`docs/PILOTO.md`](docs/PILOTO.md) — roteiro do piloto e metricas de sucesso
