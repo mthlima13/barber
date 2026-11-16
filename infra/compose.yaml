@@ -41,10 +41,15 @@ services:
     build:
       context: ../apps/web
       dockerfile: Dockerfile
+      args:
+        # Inlined no bundle do browser no build (NEXT_PUBLIC_*):
+        # host mapeado da API (8081 no host; a 8080 ja esta ocupada)
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8081
+        NEXT_PUBLIC_DEFAULT_SLUG: barbearia-piloto
     depends_on:
       - api
     environment:
-      # Consumo do browser: host mapeado da API (8081 no host)
+      # Mesmos valores em runtime (consistencia p/ quem le o env)
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8081
       NEXT_PUBLIC_DEFAULT_SLUG: barbearia-piloto
     ports:
